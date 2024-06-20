@@ -147,15 +147,6 @@ if PYDANTIC_V2:
         model_field_pv1: ModelField_V1 | None = None
         is_pv1_proxy: bool = False
 
-
-
-
-        @property
-        def field_info(self) -> FieldInfo:
-            if self.is_pv1_proxy:
-                return self.model_field_pv1.field_info
-            return self.field_info
-
         @property
         def alias(self) -> str:
             if self.is_pv1_proxy:
