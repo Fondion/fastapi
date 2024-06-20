@@ -1,6 +1,6 @@
 from typing import Any, Callable, List, Optional, Sequence
 
-from fastapi._compat import ModelField
+from fastapi._compat import ModelField, ModelField_V1
 from fastapi.security.base import SecurityBase
 
 
@@ -16,11 +16,11 @@ class Dependant:
     def __init__(
         self,
         *,
-        path_params: Optional[List[ModelField]] = None,
-        query_params: Optional[List[ModelField]] = None,
-        header_params: Optional[List[ModelField]] = None,
-        cookie_params: Optional[List[ModelField]] = None,
-        body_params: Optional[List[ModelField]] = None,
+        path_params: Optional[List[ModelField] | List[ModelField_V1]] = None,
+        query_params: Optional[List[ModelField] | List[ModelField_V1]] = None,
+        header_params: Optional[List[ModelField] | List[ModelField_V1]] = None,
+        cookie_params: Optional[List[ModelField] | List[ModelField_V1]] = None,
+        body_params: Optional[List[ModelField] | List[ModelField_V1]] = None,
         dependencies: Optional[List["Dependant"]] = None,
         security_schemes: Optional[List[SecurityRequirement]] = None,
         name: Optional[str] = None,
@@ -56,3 +56,9 @@ class Dependant:
         self.path = path
         # Save the cache key at creation to optimize performance
         self.cache_key = (self.call, tuple(sorted(set(self.security_scopes or []))))
+
+    @property
+    def is_pv2_request(self) -> bool:
+        return any(isinstance(field, ModelField) for field in self.body_params) or any(
+            isinstance(field, ModelField) for field in self.query_params
+        )

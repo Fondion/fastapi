@@ -459,14 +459,14 @@ if PYDANTIC_V2:
     ]:
         # TODO: handle access I presume
         if isinstance(fields[0], ModelField):
-            return get_definitions_pv1(
+            return get_definitions_pv2(
                 fields=fields,
                 schema_generator=schema_generator,
                 model_name_map=model_name_map,
                 separate_input_output_schemas=separate_input_output_schemas,
             )
         else:
-            return get_definitions_pv2(
+            return get_definitions_pv1(
                 fields=fields,
                 schema_generator=schema_generator,
                 model_name_map=model_name_map,
@@ -516,8 +516,8 @@ if PYDANTIC_V2:
 
     def _get_model_definitions_pv1(
         *,
-        flat_models: Set[Union[Type[BaseModel], Type[Enum]]],
-        model_name_map: Dict[Union[Type[BaseModel], Type[Enum]], str],
+        flat_models: Set[Union[Type[BaseModel_V1], Type[Enum]]],
+        model_name_map: Dict[Union[Type[BaseModel_V1], Type[Enum]], str],
     ) -> Dict[str, Any]:
         definitions: Dict[str, Dict[str, Any]] = {}
         for model in flat_models:
@@ -530,6 +530,7 @@ if PYDANTIC_V2:
                 m_schema["description"] = m_schema["description"].split("\f")[0]
             definitions[model_name] = m_schema
         return definitions
+
 
     def is_scalar_field(field: ModelField | ModelField_V1) -> bool:
         if isinstance(field, ModelField):
@@ -725,7 +726,7 @@ else:
     GetJsonSchemaHandler = Any  # type: ignore[assignment,misc]
     JsonSchemaValue = Dict[str, Any]  # type: ignore[misc]
     CoreSchema = Any  # type: ignore[assignment,misc]
-
+    ModelField_V1 = Any
     sequence_shapes = {
         SHAPE_LIST,
         SHAPE_SET,

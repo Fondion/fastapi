@@ -8,6 +8,7 @@ from fastapi._compat import (
     GenerateJsonSchema,
     JsonSchemaValue,
     ModelField,
+    ModelField_V1,
     Undefined,
     get_compat_model_name_map,
     get_definitions,
@@ -89,11 +90,11 @@ def get_openapi_security_definitions(
 
 def get_openapi_operation_parameters(
     *,
-    all_route_params: Sequence[ModelField],
+    all_route_params: Sequence[ModelField | ModelField_V1],
     schema_generator: GenerateJsonSchema,
     model_name_map: ModelNameMap,
     field_mapping: Dict[
-        Tuple[ModelField, Literal["validation", "serialization"]], JsonSchemaValue
+        Tuple[ModelField | ModelField_V1, Literal["validation", "serialization"]], JsonSchemaValue
     ],
     separate_input_output_schemas: bool = True,
 ) -> List[Dict[str, Any]]:
@@ -130,17 +131,17 @@ def get_openapi_operation_parameters(
 
 def get_openapi_operation_request_body(
     *,
-    body_field: Optional[ModelField],
+    body_field: Optional[ModelField | ModelField_V1],
     schema_generator: GenerateJsonSchema,
     model_name_map: ModelNameMap,
     field_mapping: Dict[
-        Tuple[ModelField, Literal["validation", "serialization"]], JsonSchemaValue
+        Tuple[ModelField | ModelField_V1, Literal["validation", "serialization"]], JsonSchemaValue
     ],
     separate_input_output_schemas: bool = True,
 ) -> Optional[Dict[str, Any]]:
     if not body_field:
         return None
-    assert isinstance(body_field, ModelField)
+    assert isinstance(body_field, ModelField or ModelField_V1), "A request body must be a Pydantic Field"
     body_schema = get_schema_from_model_field(
         field=body_field,
         schema_generator=schema_generator,
@@ -219,7 +220,7 @@ def get_openapi_path(
     schema_generator: GenerateJsonSchema,
     model_name_map: ModelNameMap,
     field_mapping: Dict[
-        Tuple[ModelField, Literal["validation", "serialization"]], JsonSchemaValue
+        Tuple[ModelField | ModelField_V1, Literal["validation", "serialization"]], JsonSchemaValue
     ],
     separate_input_output_schemas: bool = True,
 ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
@@ -406,33 +407,58 @@ def get_openapi_path(
 
 def get_fields_from_routes(
     routes: Sequence[BaseRoute],
-) -> List[ModelField]:
+) -> tuple[List[ModelField], List[ModelField_V1]]:
     body_fields_from_routes: List[ModelField] = []
+    body_fields_from_routes_v1: List[ModelField_V1] = []
     responses_from_routes: List[ModelField] = []
+    responses_from_routes_v1: List[ModelField_V1] = []
     request_fields_from_routes: List[ModelField] = []
+    request_fields_from_routes_v1: List[ModelField_V1] = []
     callback_flat_models: List[ModelField] = []
+    callback_flat_models_v1: List[ModelField_V1] = []
     for route in routes:
         if getattr(route, "include_in_schema", None) and isinstance(
             route, routing.APIRoute
         ):
             if route.body_field:
                 assert isinstance(
-                    route.body_field, ModelField
+                    route.body_field, ModelField or ModelField_V1
                 ), "A request body must be a Pydantic Field"
-                body_fields_from_routes.append(route.body_field)
+                if isinstance(route.body_field, ModelField):
+                    body_fields_from_routes.append(route.body_field)
+                else:
+                    body_fields_from_routes_v1.append(route.body_field)
             if route.response_field:
-                responses_from_routes.append(route.response_field)
+                if isinstance(route.response_field, ModelField):
+                    responses_from_routes.append(route.response_field)
+                else:
+                    responses_from_routes_v1.append(route.response_field)
             if route.response_fields:
-                responses_from_routes.extend(route.response_fields.values())
+                if isinstance(
+                    list(route.response_fields.values())[0], ModelField
+                ):
+                    responses_from_routes.extend(route.response_fields.values())
+                else:
+                    responses_from_routes_v1.extend(route.response_fields.values())
             if route.callbacks:
-                callback_flat_models.extend(get_fields_from_routes(route.callbacks))
+                v2_models, v1_models = get_fields_from_routes(route.callbacks)
+                callback_flat_models.extend(v2_models)
+                callback_flat_models_v1.extend(v1_models)
             params = get_flat_params(route.dependant)
-            request_fields_from_routes.extend(params)
+            if route.dependant.is_pv2_request:
+                request_fields_from_routes.extend(params)
+            else:
+                request_fields_from_routes_v1.extend(params)
 
-    flat_models = callback_flat_models + list(
+    flat_models_v2 = callback_flat_models + list(
         body_fields_from_routes + responses_from_routes + request_fields_from_routes
     )
-    return flat_models
+    flat_models_v1 = callback_flat_models_v1 + list(
+        body_fields_from_routes_v1
+        + responses_from_routes_v1
+        + request_fields_from_routes_v1
+    )
+    return flat_models_v2, flat_models_v1
 
 
 def get_openapi(
@@ -469,15 +495,24 @@ def get_openapi(
     paths: Dict[str, Dict[str, Any]] = {}
     webhook_paths: Dict[str, Dict[str, Any]] = {}
     operation_ids: Set[str] = set()
-    all_fields = get_fields_from_routes(list(routes or []) + list(webhooks or []))
-    model_name_map = get_compat_model_name_map(all_fields)
+    all_fields_v2, all_fields_v1 = get_fields_from_routes(list(routes or []) + list(webhooks or []))
+    model_name_map_v2 = get_compat_model_name_map(all_fields_v2)
+    model_name_map = get_compat_model_name_map(all_fields_v1)
     schema_generator = GenerateJsonSchema(ref_template=REF_TEMPLATE)
-    field_mapping, definitions = get_definitions(
-        fields=all_fields,
+    field_mapping_v2, definitions_v2 = get_definitions(
+        fields=all_fields_v2,
+        schema_generator=schema_generator,
+        model_name_map=model_name_map_v2,
+        separate_input_output_schemas=separate_input_output_schemas,
+    )
+    field_mapping_v1, definitions_v1 = get_definitions(
+        fields=all_fields_v1,
         schema_generator=schema_generator,
         model_name_map=model_name_map,
         separate_input_output_schemas=separate_input_output_schemas,
     )
+    field_mapping = {**field_mapping_v2, **field_mapping_v1}
+    definitions = {**definitions_v2, **definitions_v1}
     for route in routes or []:
         if isinstance(route, routing.APIRoute):
             result = get_openapi_path(
