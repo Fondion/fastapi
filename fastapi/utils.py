@@ -145,7 +145,7 @@ def create_cloned_field(
     if cloned_types is None:
         cloned_types = _CLONED_TYPES_CACHE
 
-    original_type = field.type_
+    original_type = field.model_field_pv1.type_ if was_pv1_proxy else field.type_
     if is_dataclass(original_type) and hasattr(original_type, "__pydantic_model__"):
         original_type = original_type.__pydantic_model__
     use_type = original_type
