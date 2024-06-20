@@ -138,14 +138,13 @@ def create_cloned_field(
             if not field.is_pv1_proxy:
                 return field
         was_pv1_proxy = True
-        first_entry = False
         from fastapi._compat import BaseModel_V1
     # cloned_types caches already cloned types to support recursive models and improve
     # performance by avoiding unnecessary cloning
     if cloned_types is None:
         cloned_types = _CLONED_TYPES_CACHE
 
-    original_type = field.model_field_pv1.type_ if was_pv1_proxy else field.type_
+    original_type = field.model_field_pv1.type_ if was_pv1_proxy and first_entry else field.type_
     if is_dataclass(original_type) and hasattr(original_type, "__pydantic_model__"):
         original_type = original_type.__pydantic_model__
     use_type = original_type
@@ -155,6 +154,7 @@ def create_cloned_field(
         if use_type is None:
             use_type = create_model_V1(original_type.__name__, __base__=original_type)
             cloned_types[original_type] = use_type
+            first_entry = False
             for f in original_type.__fields__.values():
                 use_type.__fields__[f.name] = create_cloned_field(
                     f, cloned_types=cloned_types, first_entry=first_entry, was_pv1_proxy=was_pv1_proxy
