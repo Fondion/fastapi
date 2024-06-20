@@ -63,18 +63,82 @@ if PYDANTIC_V2:
 
     try:
         from pydantic_core.core_schema import (
-            with_info_plain_validator_function as with_info_plain_validator_function,
+            with_info_plain_validator_function as with_info_plain_validator_function_pv2,
         )
     except ImportError:  # pragma: no cover
         from pydantic_core.core_schema import (
-            general_plain_validator_function as with_info_plain_validator_function,  # noqa: F401
+            general_plain_validator_function as with_info_plain_validator_function_pv2,  # noqa: F401
         )
 
+    # pydantic v1 imports sourced from v2 to support simultaneous use
+    from pydantic.v1 import BaseModel as BaseModel_V1
+    from pydantic.v1 import create_model as create_model_V1
+    from fastapi.openapi.constants import REF_PREFIX as REF_PREFIX_V1
+    from pydantic.v1 import AnyUrl as Url_V1
+    from pydantic.v1 import BaseConfig as BaseConfig_V1
+    from pydantic.v1 import ValidationError as ValidationError_V1
+    from pydantic.v1.class_validators import Validator as Validator_V1
+    from pydantic.v1.error_wrappers import ErrorWrapper as ErrorWrapper_V1
+    from pydantic.v1.errors import MissingError as MissingError_V1
+    from pydantic.v1.fields import (
+        SHAPE_FROZENSET as SHAPE_FROZENSET_V1,
+        SHAPE_LIST as SHAPE_LIST_V1,
+        SHAPE_SEQUENCE as SHAPE_SEQUENCE_V1,
+        SHAPE_SET as SHAPE_SET_V1,
+        SHAPE_SINGLETON as SHAPE_SINGLETON_V1,
+        SHAPE_TUPLE as SHAPE_TUPLE_V1,
+        SHAPE_TUPLE_ELLIPSIS as SHAPE_TUPLE_ELLIPSIS_V1,
+    )
+    from pydantic.v1.fields import FieldInfo as FieldInfo_V1
+    from pydantic.v1.fields import ModelField as ModelField_V1
+    from pydantic.v1.fields import Required as Required_V1
+    from pydantic.v1.fields import Undefined as Undefined_V1
+    from pydantic.v1.fields import UndefinedType as UndefinedType_V1
+    from pydantic.v1.schema import (
+        field_schema as field_schema_pv1,
+        get_flat_models_from_fields as get_flat_models_from_fields_pv1,
+        get_model_name_map as get_model_name_map_pv1,
+        model_process_schema as model_process_schema_pv1,
+    )
+    from pydantic.v1.schema import get_annotation_from_field_info as get_annotation_from_field_info_pv1
+    from pydantic.v1.typing import evaluate_forwardref as evaluate_forwardref_pv1
+    from pydantic.v1.utils import lenient_issubclass as lenient_issubclass_pv1
+
+    # V2
     Required = PydanticUndefined
     Undefined = PydanticUndefined
     UndefinedType = PydanticUndefinedType
     evaluate_forwardref = eval_type_lenient
     Validator = Any
+
+    # V1
+    GetJsonSchemaHandler_V1 = Any
+    JsonSchemaValue_V1 = Dict[str, Any]
+    CoreSchema_V1 = Any
+
+    sequence_shapes_V1 = {
+        SHAPE_LIST_V1,
+        SHAPE_SET_V1,
+        SHAPE_FROZENSET_V1,
+        SHAPE_TUPLE_V1,
+        SHAPE_SEQUENCE_V1,
+        SHAPE_TUPLE_ELLIPSIS_V1,
+    }
+    sequence_shape_to_type_V1 = {
+        SHAPE_LIST_V1: list,
+        SHAPE_SET_V1: set,
+        SHAPE_TUPLE_V1: tuple,
+        SHAPE_SEQUENCE_V1: list,
+        SHAPE_TUPLE_ELLIPSIS_V1: list,
+    }
+
+    @dataclass
+    class GenerateJsonSchema_V1:
+        ref_template: str
+
+
+    class PydanticSchemaGenerationError_V1(Exception):
+        pass
 
     class BaseConfig:
         pass
@@ -167,21 +231,168 @@ if PYDANTIC_V2:
     ) -> Any:
         return annotation
 
+    def with_info_plain_validator_function(
+        function: Callable[..., Any],
+        *args,
+        ref: Union[str, None] = None,
+        metadata: Any = None,
+        serialization: Any = None,
+    ) -> Any:
+        try:
+            return with_info_plain_validator_function_pv2(
+                function, *args, ref=ref, metadata=metadata, serialization=serialization
+            )
+        # TODO: handle the error
+        except TypeError:
+            return _with_info_plain_validator_function_pv1(
+                function, *args, ref=ref, metadata=metadata, serialization=serialization
+            )
+
+    def _with_info_plain_validator_function_pv1(  # type: ignore[misc]
+        function: Callable[..., Any],
+        *args,
+        ref: Union[str, None] = None,
+        metadata: Any = None,
+        serialization: Any = None,
+    ) -> Any:
+        return {}
+
+    def is_pv1_scalar_field(field: ModelField_V1) -> bool:
+        from fastapi import params
+
+        field_info = field.field_info
+        if not (
+            field.shape == SHAPE_SINGLETON_V1  # type: ignore[attr-defined]
+            and not lenient_issubclass_pv1(field.type_, BaseModel_V1)
+            and not lenient_issubclass_pv1(field.type_, dict)
+            and not field_annotation_is_sequence(field.type_)
+            and not is_dataclass(field.type_)
+            and not isinstance(field_info, params.Body)
+        ):
+            return False
+        if field.sub_fields:  # type: ignore[attr-defined]
+            if not all(
+                is_pv1_scalar_field(f)
+                for f in field.sub_fields  # type: ignore[attr-defined]
+            ):
+                return False
+        return True
+
+    def is_pv1_scalar_sequence_field(field: ModelField) -> bool:
+        if (field.shape in sequence_shapes_V1) and not lenient_issubclass_pv1(  # type: ignore[attr-defined]
+            field.type_, BaseModel_V1
+        ):
+            if field.sub_fields is not None:  # type: ignore[attr-defined]
+                for sub_field in field.sub_fields:  # type: ignore[attr-defined]
+                    if not is_pv1_scalar_field(sub_field):
+                        return False
+            return True
+        if _annotation_is_sequence(field.type_):
+            return True
+        return False
+
     def _normalize_errors(errors: Sequence[Any]) -> List[Dict[str, Any]]:
+        use_v1 = False
+        for error in errors:
+            if isinstance(error, ErrorWrapper_V1):
+                use_v1 = True
+                break
+            if isinstance(error, list):
+                if isinstance(error[0], ErrorWrapper_V1):
+                    use_v1 = True
+                    break
+        if use_v1:
+            return _normalize_errors_pv1(errors)
+        else:
+            return _normalize_errors_pv2(errors)
+
+    def _normalize_errors_pv2(errors: Sequence[Any]) -> List[Dict[str, Any]]:
         return errors  # type: ignore[return-value]
 
-    def _model_rebuild(model: Type[BaseModel]) -> None:
+    def _normalize_errors_pv1(errors: Sequence[Any]) -> List[Dict[str, Any]]:
+        use_errors: List[Any] = []
+        for error in errors:
+            if isinstance(error, ErrorWrapper_V1):
+                new_errors = ValidationError_V1(  # type: ignore[call-arg]
+                    errors=[error], model=RequestErrorModel
+                ).errors()
+                use_errors.extend(new_errors)
+            elif isinstance(error, list):
+                use_errors.extend(_normalize_errors_pv1(error))
+            else:
+                use_errors.append(error)
+        return use_errors
+
+    def _model_rebuild(model: Type[BaseModel] | Type[BaseModel_V1]) -> None:
+        if type(model) is BaseModel:
+            _model_rebuild_pv2(model)
+        else:
+            _model_rebuild_pv1(model)
+
+    def _model_rebuild_pv2(model: Type[BaseModel]) -> None:
         model.model_rebuild()
 
+    def _model_rebuild_pv1(model: Type[BaseModel_V1]) -> None:
+        model.update_forward_refs()
+
     def _model_dump(
+        model: BaseModel | BaseModel_V1, mode: Literal["json", "python"] = "json", **kwargs: Any
+    ) -> Any:
+        if isinstance(model, BaseModel):
+            return _model_dump_pv2(model, mode=mode, **kwargs)
+        else:
+            return _model_dump_pv1(model, mode=mode, **kwargs)
+
+    def _model_dump_pv2(
         model: BaseModel, mode: Literal["json", "python"] = "json", **kwargs: Any
     ) -> Any:
         return model.model_dump(mode=mode, **kwargs)
 
-    def _get_model_config(model: BaseModel) -> Any:
+    def _model_dump_pv1(
+        model: BaseModel_V1, mode: Literal["json", "python"] = "json", **kwargs: Any
+    ) -> Any:
+        return model.dict(**kwargs)
+
+    def _get_model_config(model: BaseModel | BaseModel_V1) -> Any:
+        if isinstance(model, BaseModel):
+            return _get_model_config_pv2(model)
+        else:
+            return _get_model_config_pv1(model)
+
+    def _get_model_config_pv2(model: BaseModel) -> Any:
         return model.model_config
 
+    def _get_model_config_pv1(model: BaseModel_V1) -> Any:
+        return model.__config__  # type: ignore[attr-defined]
+
     def get_schema_from_model_field(
+        *,
+        field: ModelField | ModelField_V1,
+        schema_generator: GenerateJsonSchema | GenerateJsonSchema_V1,
+        model_name_map: ModelNameMap,
+        field_mapping: Dict[
+            Tuple[ModelField, Literal["validation", "serialization"]], JsonSchemaValue
+        ],
+        separate_input_output_schemas: bool = True,
+    ) -> Dict[str, Any]:
+        if isinstance(field, ModelField):
+            return get_schema_from_model_field_pv2(
+                field=field,
+                schema_generator=schema_generator,
+                model_name_map=model_name_map,
+                field_mapping=field_mapping,
+                separate_input_output_schemas=separate_input_output_schemas,
+            )
+        else:
+            return get_schema_from_model_field_pv1(
+                field=field,
+                schema_generator=schema_generator,
+                model_name_map=model_name_map,
+                field_mapping=field_mapping,
+                separate_input_output_schemas=separate_input_output_schemas,
+            )
+
+    def get_schema_from_model_field_pv2(
         *,
         field: ModelField,
         schema_generator: GenerateJsonSchema,
@@ -204,10 +415,65 @@ if PYDANTIC_V2:
             )
         return json_schema
 
-    def get_compat_model_name_map(fields: List[ModelField]) -> ModelNameMap:
+    def get_schema_from_model_field_pv1(
+        *,
+        field: ModelField_V1,
+        schema_generator: GenerateJsonSchema_V1,
+        model_name_map: ModelNameMap,
+        field_mapping: Dict[
+            Tuple[ModelField, Literal["validation", "serialization"]], JsonSchemaValue
+        ],
+        separate_input_output_schemas: bool = True,
+    ) -> Dict[str, Any]:
+        # This expects that GenerateJsonSchema was already used to generate the definitions
+        return field_schema_pv1(  # type: ignore[no-any-return]
+            field, model_name_map=model_name_map, ref_prefix=REF_PREFIX_V1
+        )[0]
+
+    def get_compat_model_name_map(fields: List[ModelField] | List[ModelField_V1]) -> ModelNameMap:
+        # TODO: handle access I presume
+        if isinstance(fields[0], ModelField):
+            return get_compat_model_name_map_pv2(fields)
+        else:
+            return get_compat_model_name_map_pv1(fields)
+
+    def get_compat_model_name_map_pv2(fields: List[ModelField]) -> ModelNameMap:
         return {}
 
+    def get_compat_model_name_map_pv1(fields: List[ModelField_V1]) -> ModelNameMap:
+        models = get_flat_models_from_fields_pv1(fields, known_models=set())
+        return get_model_name_map_pv1(models)  # type: ignore[no-any-return]
+
+
     def get_definitions(
+        *,
+        fields: List[ModelField] | List[ModelField_V1],
+        schema_generator: GenerateJsonSchema | GenerateJsonSchema_V1,
+        model_name_map: ModelNameMap,
+        separate_input_output_schemas: bool = True,
+    ) -> Tuple[
+        Dict[
+            Tuple[ModelField, Literal["validation", "serialization"]], JsonSchemaValue
+        ],
+        Dict[str, Dict[str, Any]],
+    ]:
+        # TODO: handle access I presume
+        if isinstance(fields[0], ModelField):
+            return get_definitions_pv2(
+                fields=fields,
+                schema_generator=schema_generator,
+                model_name_map=model_name_map,
+                separate_input_output_schemas=separate_input_output_schemas,
+            )
+        else:
+            return get_definitions_pv1(
+                fields=fields,
+                schema_generator=schema_generator,
+                model_name_map=model_name_map,
+                separate_input_output_schemas=separate_input_output_schemas,
+            )
+
+    def get_definitions_pv2(
         *,
         fields: List[ModelField],
         schema_generator: GenerateJsonSchema,
@@ -231,26 +497,112 @@ if PYDANTIC_V2:
         )
         return field_mapping, definitions  # type: ignore[return-value]
 
-    def is_scalar_field(field: ModelField) -> bool:
+    def get_definitions_pv1(
+        *,
+        fields: List[ModelField_V1],
+        schema_generator: GenerateJsonSchema_V1,
+        model_name_map: ModelNameMap,
+        separate_input_output_schemas: bool = True,
+    ) -> Tuple[
+        Dict[
+            Tuple[ModelField, Literal["validation", "serialization"]], JsonSchemaValue
+        ],
+        Dict[str, Dict[str, Any]],
+    ]:
+        models = get_flat_models_from_fields_pv1(fields, known_models=set())
+        return {}, _get_model_definitions_pv1(
+            flat_models=models, model_name_map=model_name_map
+        )
+
+    def _get_model_definitions_pv1(
+        *,
+        flat_models: Set[Union[Type[BaseModel], Type[Enum]]],
+        model_name_map: Dict[Union[Type[BaseModel], Type[Enum]], str],
+    ) -> Dict[str, Any]:
+        definitions: Dict[str, Dict[str, Any]] = {}
+        for model in flat_models:
+            m_schema, m_definitions, m_nested_models = model_process_schema_pv1(
+                model, model_name_map=model_name_map, ref_prefix=REF_PREFIX
+            )
+            definitions.update(m_definitions)
+            model_name = model_name_map[model]
+            if "description" in m_schema:
+                m_schema["description"] = m_schema["description"].split("\f")[0]
+            definitions[model_name] = m_schema
+        return definitions
+
+    def is_scalar_field(field: ModelField | ModelField_V1) -> bool:
+        if isinstance(field, ModelField):
+            return is_scalar_field_pv2(field)
+        else:
+            return is_scalar_field_pv1(field)
+
+    def is_scalar_field_pv2(field: ModelField) -> bool:
         from fastapi import params
 
         return field_annotation_is_scalar(
             field.field_info.annotation
         ) and not isinstance(field.field_info, params.Body)
 
-    def is_sequence_field(field: ModelField) -> bool:
+    def is_scalar_field_pv1(field: ModelField_V1) -> bool:
+        return is_pv1_scalar_field(field)
+
+
+    def is_sequence_field(field: ModelField | ModelField_V1) -> bool:
+        if isinstance(field, ModelField):
+            return is_sequence_field_pv2(field)
+        else:
+            return is_sequence_field_pv1(field)
+
+    def is_sequence_field_pv2(field: ModelField) -> bool:
         return field_annotation_is_sequence(field.field_info.annotation)
 
-    def is_scalar_sequence_field(field: ModelField) -> bool:
+    def is_sequence_field_pv1(field: ModelField_V1) -> bool:
+        return field.shape in sequence_shapes or _annotation_is_sequence(field.type_)
+
+    def is_scalar_sequence_field(field: ModelField | ModelField_V1) -> bool:
+        if isinstance(field, ModelField):
+            return is_scalar_sequence_field_pv2(field)
+        else:
+            return is_scalar_sequence_field_pv1(field)
+
+    def is_scalar_sequence_field_pv2(field: ModelField) -> bool:
         return field_annotation_is_scalar_sequence(field.field_info.annotation)
 
-    def is_bytes_field(field: ModelField) -> bool:
+    def is_scalar_sequence_field_pv1(field: ModelField_V1) -> bool:
+        return is_pv1_scalar_sequence_field(field)
+
+    def is_bytes_field(field: ModelField | ModelField_V1) -> bool:
+        if isinstance(field, ModelField):
+            return is_bytes_field_pv2(field)
+        else:
+            return is_bytes_field_pv1(field)
+
+    def is_bytes_field_pv2(field: ModelField) -> bool:
         return is_bytes_or_nonable_bytes_annotation(field.type_)
 
-    def is_bytes_sequence_field(field: ModelField) -> bool:
+    def is_bytes_field_pv1(field: ModelField_V1) -> bool:
+        return lenient_issubclass_pv1(field.type_, bytes)
+
+    def is_bytes_sequence_field(field: ModelField | ModelField_V1) -> bool:
+        if isinstance(field, ModelField):
+            return is_bytes_sequence_field_pv2(field)
+        else:
+            return is_bytes_sequence_field_pv1(field)
+
+    def is_bytes_sequence_field_pv2(field: ModelField) -> bool:
         return is_bytes_sequence_annotation(field.type_)
 
+    def is_bytes_sequence_field_pv1(field: ModelField_V1) -> bool:
+        return field.shape in sequence_shapes_V1 and lenient_issubclass_pv1(field.type_, bytes)
+
     def copy_field_info(*, field_info: FieldInfo, annotation: Any) -> FieldInfo:
+        if isinstance(field_info, FieldInfo):
+            return copy_field_info_pv2(field_info=field_info, annotation=annotation)
+        else:
+            return copy_field_info_pv1(field_info=field_info, annotation=annotation)
+
+    def copy_field_info_pv2(*, field_info: FieldInfo | FieldInfo_V1, annotation: Any) -> FieldInfo:
         cls = type(field_info)
         merged_field_info = cls.from_annotation(annotation)
         new_field_info = copy(field_info)
@@ -258,25 +610,64 @@ if PYDANTIC_V2:
         new_field_info.annotation = merged_field_info.annotation
         return new_field_info
 
-    def serialize_sequence_value(*, field: ModelField, value: Any) -> Sequence[Any]:
+    def copy_field_info_pv1(*, field_info: FieldInfo_V1, annotation: Any) -> FieldInfo:
+        return copy(field_info)
+
+    def serialize_sequence_value(*, field: ModelField | ModelField_V1, value: Any) -> Sequence[Any]:
+        if isinstance(field, ModelField):
+            return serialize_sequence_value_pv2(field=field, value=value)
+        else:
+            return serialize_sequence_value_pv1(field=field, value=value)
+
+    def serialize_sequence_value_pv2(*, field: ModelField, value: Any) -> Sequence[Any]:
         origin_type = (
             get_origin(field.field_info.annotation) or field.field_info.annotation
         )
         assert issubclass(origin_type, sequence_types)  # type: ignore[arg-type]
         return sequence_annotation_to_type[origin_type](value)  # type: ignore[no-any-return]
 
+    def serialize_sequence_value_pv1(*, field: ModelField_V1, value: Any) -> Sequence[Any]:
+        return sequence_shape_to_type_V1[field.shape](value)
+
+
     def get_missing_field_error(loc: Tuple[str, ...]) -> Dict[str, Any]:
+        # TODO: fill this out
+        return get_missing_field_error_pv2(loc)
+
+    def get_missing_field_error_pv2(loc: Tuple[str, ...]) -> Dict[str, Any]:
         error = ValidationError.from_exception_data(
             "Field required", [{"type": "missing", "loc": loc, "input": {}}]
         ).errors(include_url=False)[0]
         error["input"] = None
         return error  # type: ignore[return-value]
 
+    def get_missing_field_error_pv1(loc: Tuple[str, ...]) -> Dict[str, Any]:
+        missing_field_error = ErrorWrapper_V1(MissingError_V1(), loc=loc)  # type: ignore[call-arg]
+        new_error = ValidationError_V1([missing_field_error], RequestErrorModel)
+        return new_error.errors()[0]
+
     def create_body_model(
+        *, fields: Sequence[ModelField] | Sequence[ModelField_V1], model_name: str
+    ) -> Type[BaseModel] | Type[BaseModel_V1]:
+        # TODO: handle error
+        if isinstance(fields[0], ModelField):
+            return create_body_model_pv2(fields=fields, model_name=model_name)
+        else:
+            return create_body_model_pv1(fields=fields, model_name=model_name)
+
+    def create_body_model_pv2(
         *, fields: Sequence[ModelField], model_name: str
     ) -> Type[BaseModel]:
         field_params = {f.name: (f.field_info.annotation, f.field_info) for f in fields}
         BodyModel: Type[BaseModel] = create_model(model_name, **field_params)  # type: ignore[call-overload]
+        return BodyModel
+
+    def create_body_model_pv1(
+        *, fields: Sequence[ModelField_V1], model_name: str
+    ) -> Type[BaseModel_V1]:
+        BodyModel = create_model_V1(model_name)
+        for f in fields:
+            BodyModel.__fields__[f.name] = f  # type: ignore[index]
         return BodyModel
 
 else:
