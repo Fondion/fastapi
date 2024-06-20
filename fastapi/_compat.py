@@ -141,11 +141,13 @@ if PYDANTIC_V2:
 
     @dataclass
     class ModelField:
-        field_info: FieldInfo
         name: str
-        model_field_pv1: ModelField_V1 | None
-        is_pv1_proxy: bool = False
+        field_info: FieldInfo
         mode: Literal["validation", "serialization"] = "validation"
+        model_field_pv1: ModelField_V1 | None = None
+        is_pv1_proxy: bool = False
+
+
 
 
         @property
