@@ -459,14 +459,14 @@ if PYDANTIC_V2:
     ]:
         # TODO: handle access I presume
         if isinstance(fields[0], ModelField):
-            return get_definitions_pv2(
+            return get_definitions_pv1(
                 fields=fields,
                 schema_generator=schema_generator,
                 model_name_map=model_name_map,
                 separate_input_output_schemas=separate_input_output_schemas,
             )
         else:
-            return get_definitions_pv1(
+            return get_definitions_pv2(
                 fields=fields,
                 schema_generator=schema_generator,
                 model_name_map=model_name_map,
