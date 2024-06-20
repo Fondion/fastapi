@@ -109,7 +109,7 @@ if PYDANTIC_V2:
     Required = PydanticUndefined
     Undefined = PydanticUndefined
     UndefinedType = PydanticUndefinedType
-    FieldInfo: TypeAlias = FieldInfo | FieldInfo_V1
+
     def evaluate_forwardref(value: Any, globalns: dict[str, Any] | None = None, localns: dict[str, Any] | None = None) -> Any:
         try:
             return eval_type_lenient(value, globalns, localns)
@@ -143,9 +143,10 @@ if PYDANTIC_V2:
     class ModelField:
         field_info: FieldInfo
         name: str
-        mode: Literal["validation", "serialization"] = "validation"
+        model_field_pv1: ModelField_V1 | None
         is_pv1_proxy: bool = False
-        model_field_pv1: ModelField_V1 | None = None
+        mode: Literal["validation", "serialization"] = "validation"
+
 
         @property
         def field_info(self) -> FieldInfo:
