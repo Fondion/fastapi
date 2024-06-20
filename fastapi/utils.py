@@ -75,15 +75,22 @@ def create_response_field(
     Create a new response field. Raises if type_ is invalid.
     """
     class_validators = class_validators or {}
+    kwargs = {"name": name}
     if PYDANTIC_V2:
-        field_info = field_info or FieldInfo(
-            annotation=type_, default=default, alias=alias
-        )
+        from fastapi._compat import BaseModel_V1, FieldInfo_V1
+        if lenient_issubclass(type_, BaseModel_V1):
+            field_info = field_info or FieldInfo_V1()
+        else:
+            field_info = field_info or FieldInfo(
+                annotation=type_, default=default, alias=alias
+            )
     else:
         field_info = field_info or FieldInfo()
-    kwargs = {"name": name, "field_info": field_info}
-    if PYDANTIC_V2:
-        kwargs.update({"mode": mode})
+    kwargs.update({"field_info": field_info})
+    if PYDANTIC_V2 and not lenient_issubclass(type_, BaseModel_V1):
+        kwargs.update(
+            {"mode": mode}
+        )
     else:
         kwargs.update(
             {
@@ -96,6 +103,12 @@ def create_response_field(
             }
         )
     try:
+        if PYDANTIC_V2:
+            from fastapi._compat import BaseModel_V1, ModelField_V1
+            if lenient_issubclass(type_, BaseModel_V1):
+                return ModelField(**kwargs, is_pv1_proxy=True, model_field_pv1=ModelField_V1(**kwargs))
+            else:
+                return ModelField(**kwargs)
         return ModelField(**kwargs)  # type: ignore[arg-type]
     except (RuntimeError, PydanticSchemaGenerationError):
         raise fastapi.exceptions.FastAPIError(
@@ -115,7 +128,9 @@ def create_cloned_field(
     cloned_types: Optional[MutableMapping[Type[BaseModel], Type[BaseModel]]] = None,
 ) -> ModelField:
     if PYDANTIC_V2:
-        return field
+        if not field.is_pv1_proxy:
+            return field
+        from fastapi._compat import BaseModel_V1
     # cloned_types caches already cloned types to support recursive models and improve
     # performance by avoiding unnecessary cloning
     if cloned_types is None:
@@ -125,8 +140,8 @@ def create_cloned_field(
     if is_dataclass(original_type) and hasattr(original_type, "__pydantic_model__"):
         original_type = original_type.__pydantic_model__
     use_type = original_type
-    if lenient_issubclass(original_type, BaseModel):
-        original_type = cast(Type[BaseModel], original_type)
+    if lenient_issubclass(original_type, (BaseModel, BaseModel_V1)):
+        original_type = cast(Type[BaseModel_V1], original_type)
         use_type = cloned_types.get(original_type)
         if use_type is None:
             use_type = create_model(original_type.__name__, __base__=original_type)

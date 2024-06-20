@@ -15,6 +15,7 @@ from typing import (
     Tuple,
     Type,
     Union,
+    TypeAlias
 )
 
 from fastapi.exceptions import RequestErrorModel
@@ -75,10 +76,10 @@ if PYDANTIC_V2:
     from pydantic.v1 import create_model as create_model_V1
     from fastapi.openapi.constants import REF_PREFIX as REF_PREFIX_V1
     from pydantic.v1 import AnyUrl as Url_V1
-    from pydantic.v1 import BaseConfig as BaseConfig_V1
+    from pydantic.v1 import BaseConfig
     from pydantic.v1 import ValidationError as ValidationError_V1
     from pydantic.v1.class_validators import Validator as Validator_V1
-    from pydantic.v1.error_wrappers import ErrorWrapper as ErrorWrapper_V1
+    from pydantic.v1.error_wrappers import ErrorWrapper
     from pydantic.v1.errors import MissingError as MissingError_V1
     from pydantic.v1.fields import (
         SHAPE_FROZENSET as SHAPE_FROZENSET_V1,
@@ -108,7 +109,13 @@ if PYDANTIC_V2:
     Required = PydanticUndefined
     Undefined = PydanticUndefined
     UndefinedType = PydanticUndefinedType
-    evaluate_forwardref = eval_type_lenient
+    FieldInfo: TypeAlias = FieldInfo | FieldInfo_V1
+    def evaluate_forwardref(value: Any, globalns: dict[str, Any] | None = None, localns: dict[str, Any] | None = None) -> Any:
+        try:
+            return eval_type_lenient(value, globalns, localns)
+        except Exception:
+            return evaluate_forwardref_pv1(value, globalns, localns)
+
     Validator = Any
 
     # V1
@@ -133,40 +140,42 @@ if PYDANTIC_V2:
     }
 
     @dataclass
-    class GenerateJsonSchema_V1:
-        ref_template: str
-
-
-    class PydanticSchemaGenerationError_V1(Exception):
-        pass
-
-    class BaseConfig:
-        pass
-
-    class ErrorWrapper(Exception):
-        pass
-
-    @dataclass
     class ModelField:
         field_info: FieldInfo
         name: str
         mode: Literal["validation", "serialization"] = "validation"
+        is_pv1_proxy: bool = False
+        model_field_pv1: ModelField_V1 | None = None
+
+        @property
+        def field_info(self) -> FieldInfo:
+            if self.is_pv1_proxy:
+                return self.model_field_pv1.field_info
+            return self.field_info
 
         @property
         def alias(self) -> str:
+            if self.is_pv1_proxy:
+                return self.model_field_pv1.alias
             a = self.field_info.alias
             return a if a is not None else self.name
 
         @property
         def required(self) -> bool:
+            if self.is_pv1_proxy:
+                return self.model_field_pv1.required
             return self.field_info.is_required()
 
         @property
         def default(self) -> Any:
+            if self.is_pv1_proxy:
+                return self.model_field_pv1.default
             return self.get_default()
 
         @property
         def type_(self) -> Any:
+            if self.is_pv1_proxy:
+                return self.model_field_pv1.type_
             return self.field_info.annotation
 
         def __post_init__(self) -> None:
@@ -180,6 +189,8 @@ if PYDANTIC_V2:
                 pass
 
         def get_default(self) -> Any:
+            if self.is_pv1_proxy:
+                return self.model_field_pv1.get_default()
             if self.field_info.is_required():
                 return Undefined
             return self.field_info.get_default(call_default_factory=True)
@@ -191,6 +202,8 @@ if PYDANTIC_V2:
             *,
             loc: Tuple[Union[int, str], ...] = (),
         ) -> Tuple[Any, Union[List[Dict[str, Any]], None]]:
+            if self.is_pv1_proxy:
+                return (self.model_field_pv1.validate(value, values, loc=loc), None)
             try:
                 return (
                     self._type_adapter.validate_python(value, from_attributes=True),
@@ -200,16 +213,6 @@ if PYDANTIC_V2:
                 return None, _regenerate_error_with_loc(
                     errors=exc.errors(include_url=False), loc_prefix=loc
                 )
-            except AttributeError:
-                # pydantic v1
-                from pydantic import v1
-
-                try:
-                    return v1.parse_obj_as(self.type_, value), None
-                except v1.ValidationError as exc:
-                    return None, _regenerate_error_with_loc(
-                        errors=exc.errors(), loc_prefix=loc
-                    )
 
         def serialize(
             self,
@@ -225,40 +228,18 @@ if PYDANTIC_V2:
         ) -> Any:
             # What calls this code passes a value that already called
             # self._type_adapter.validate_python(value)
-            try:
-                return self._type_adapter.dump_python(
-                    value,
-                    mode=mode,
-                    include=include,
-                    exclude=exclude,
-                    by_alias=by_alias,
-                    exclude_unset=exclude_unset,
-                    exclude_defaults=exclude_defaults,
-                    exclude_none=exclude_none,
-                )
-            except AttributeError:
-                # pydantic v1
-                try:
-                    return value.dict(
-                        include=include,
-                        exclude=exclude,
-                        by_alias=by_alias,
-                        exclude_unset=exclude_unset,
-                        exclude_defaults=exclude_defaults,
-                        exclude_none=exclude_none,
-                    )
-                except AttributeError:
-                    return [
-                        item.dict(
-                            include=include,
-                            exclude=exclude,
-                            by_alias=by_alias,
-                            exclude_unset=exclude_unset,
-                            exclude_defaults=exclude_defaults,
-                            exclude_none=exclude_none,
-                        )
-                        for item in value
-                    ]
+            if self.is_pv1_proxy:
+                return
+            return self._type_adapter.dump_python(
+                value,
+                mode=mode,
+                include=include,
+                exclude=exclude,
+                by_alias=by_alias,
+                exclude_unset=exclude_unset,
+                exclude_defaults=exclude_defaults,
+                exclude_none=exclude_none,
+            )
 
         def __hash__(self) -> int:
             # Each ModelField is unique for our purposes, to allow making a dict from
@@ -268,7 +249,10 @@ if PYDANTIC_V2:
     def get_annotation_from_field_info(
         annotation: Any, field_info: FieldInfo, field_name: str
     ) -> Any:
-        return annotation
+        try:
+            return get_annotation_from_field_info_pv1(annotation, field_info, field_name)
+        except Exception:
+            return annotation
 
     def with_info_plain_validator_function(
         function: Callable[..., Any],
@@ -317,7 +301,7 @@ if PYDANTIC_V2:
                 return False
         return True
 
-    def is_pv1_scalar_sequence_field(field: ModelField) -> bool:
+    def is_pv1_scalar_sequence_field(field: ModelField_V1) -> bool:
         if (field.shape in sequence_shapes_V1) and not lenient_issubclass_pv1(  # type: ignore[attr-defined]
             field.type_, BaseModel_V1
         ):
@@ -333,11 +317,11 @@ if PYDANTIC_V2:
     def _normalize_errors(errors: Sequence[Any]) -> List[Dict[str, Any]]:
         use_v1 = False
         for error in errors:
-            if isinstance(error, ErrorWrapper_V1):
+            if isinstance(error, ErrorWrapper):
                 use_v1 = True
                 break
             if isinstance(error, list):
-                if isinstance(error[0], ErrorWrapper_V1):
+                if isinstance(error[0], ErrorWrapper):
                     use_v1 = True
                     break
         if use_v1:
@@ -351,7 +335,7 @@ if PYDANTIC_V2:
     def _normalize_errors_pv1(errors: Sequence[Any]) -> List[Dict[str, Any]]:
         use_errors: List[Any] = []
         for error in errors:
-            if isinstance(error, ErrorWrapper_V1):
+            if isinstance(error, ErrorWrapper):
                 new_errors = ValidationError_V1(  # type: ignore[call-arg]
                     errors=[error], model=RequestErrorModel
                 ).errors()
@@ -406,15 +390,15 @@ if PYDANTIC_V2:
 
     def get_schema_from_model_field(
         *,
-        field: ModelField | ModelField_V1,
-        schema_generator: GenerateJsonSchema | GenerateJsonSchema_V1,
+        field: ModelField,
+        schema_generator: GenerateJsonSchema,
         model_name_map: ModelNameMap,
         field_mapping: Dict[
             Tuple[ModelField, Literal["validation", "serialization"]], JsonSchemaValue
         ],
         separate_input_output_schemas: bool = True,
     ) -> Dict[str, Any]:
-        try:
+        if not field.is_pv1_proxy:
             return get_schema_from_model_field_pv2(
                 field=field,
                 schema_generator=schema_generator,
@@ -422,15 +406,14 @@ if PYDANTIC_V2:
                 field_mapping=field_mapping,
                 separate_input_output_schemas=separate_input_output_schemas,
             )
-        except Exception:
+        else:
             return get_schema_from_model_field_pv1(
-                field=field,
+                field=field.model_field_pv1,
                 schema_generator=schema_generator,
                 model_name_map=model_name_map,
                 field_mapping=field_mapping,
                 separate_input_output_schemas=separate_input_output_schemas,
             )
-
 
     def get_schema_from_model_field_pv2(
         *,
@@ -458,7 +441,7 @@ if PYDANTIC_V2:
     def get_schema_from_model_field_pv1(
         *,
         field: ModelField_V1,
-        schema_generator: GenerateJsonSchema_V1,
+        schema_generator: GenerateJsonSchema,
         model_name_map: ModelNameMap,
         field_mapping: Dict[
             Tuple[ModelField, Literal["validation", "serialization"]], JsonSchemaValue
@@ -470,24 +453,25 @@ if PYDANTIC_V2:
             field, model_name_map=model_name_map, ref_prefix=REF_PREFIX_V1
         )[0]
 
-    def get_compat_model_name_map(fields: List[ModelField] | List[ModelField_V1]) -> ModelNameMap:
-        try:
+    def get_compat_model_name_map(fields: List[ModelField]) -> ModelNameMap:
+        if fields[0].is_pv1_proxy:
             return get_compat_model_name_map_pv1(fields)
-        except Exception:
+        else:
             return get_compat_model_name_map_pv2(fields)
 
     def get_compat_model_name_map_pv2(fields: List[ModelField]) -> ModelNameMap:
         return {}
 
-    def get_compat_model_name_map_pv1(fields: List[ModelField_V1]) -> ModelNameMap:
-        models = get_flat_models_from_fields_pv1(fields, known_models=set())
+    def get_compat_model_name_map_pv1(fields: List[ModelField]) -> ModelNameMap:
+        v1_fields = [field.model_field_pv1 for field in fields if field.is_pv1_proxy]
+        models = get_flat_models_from_fields_pv1(v1_fields, known_models=set())
         return get_model_name_map_pv1(models)  # type: ignore[no-any-return]
 
 
     def get_definitions(
         *,
-        fields: List[ModelField] | List[ModelField_V1],
-        schema_generator: GenerateJsonSchema | GenerateJsonSchema_V1,
+        fields: List[ModelField],
+        schema_generator: GenerateJsonSchema,
         model_name_map: ModelNameMap,
         separate_input_output_schemas: bool = True,
     ) -> Tuple[
@@ -496,14 +480,14 @@ if PYDANTIC_V2:
         ],
         Dict[str, Dict[str, Any]],
     ]:
-        try:
+        if not fields[0].is_pv1_proxy:
             return get_definitions_pv2(
                 fields=fields,
                 schema_generator=schema_generator,
                 model_name_map=model_name_map,
                 separate_input_output_schemas=separate_input_output_schemas,
             )
-        except Exception:
+        else:
             return get_definitions_pv1(
                 fields=fields,
                 schema_generator=schema_generator,
@@ -539,7 +523,7 @@ if PYDANTIC_V2:
     def get_definitions_pv1(
         *,
         fields: List[ModelField],
-        schema_generator: GenerateJsonSchema_V1,
+        schema_generator: GenerateJsonSchema,
         model_name_map: ModelNameMap,
         separate_input_output_schemas: bool = True,
     ) -> Tuple[
@@ -548,7 +532,8 @@ if PYDANTIC_V2:
         ],
         Dict[str, Dict[str, Any]],
     ]:
-        models = get_flat_models_from_fields_pv1(fields, known_models=set())
+        v1_fields = [field.model_field_pv1 for field in fields if not field.is_pv1_proxy]
+        models = get_flat_models_from_fields_pv1(v1_fields, known_models=set())
         return {}, _get_model_definitions_pv1(
             flat_models=models, model_name_map=model_name_map
         )
@@ -571,11 +556,11 @@ if PYDANTIC_V2:
         return definitions
 
 
-    def is_scalar_field(field: ModelField | ModelField_V1) -> bool:
-        try:
+    def is_scalar_field(field: ModelField) -> bool:
+        if not field.is_pv1_proxy:
             return is_scalar_field_pv2(field)
-        except Exception:
-            return is_scalar_field_pv1(field)
+        else:
+            return is_scalar_field_pv1(field.model_field_pv1)
 
     def is_scalar_field_pv2(field: ModelField) -> bool:
         from fastapi import params
@@ -588,11 +573,11 @@ if PYDANTIC_V2:
         return is_pv1_scalar_field(field)
 
 
-    def is_sequence_field(field: ModelField | ModelField_V1) -> bool:
-        try:
+    def is_sequence_field(field: ModelField) -> bool:
+        if not field.is_pv1_proxy:
             return is_sequence_field_pv2(field)
-        except Exception:
-            return is_sequence_field_pv1(field)
+        else:
+            return is_sequence_field_pv1(field.model_field_pv1)
 
     def is_sequence_field_pv2(field: ModelField) -> bool:
         return field_annotation_is_sequence(field.field_info.annotation)
@@ -600,11 +585,11 @@ if PYDANTIC_V2:
     def is_sequence_field_pv1(field: ModelField_V1) -> bool:
         return field.shape in sequence_shapes or _annotation_is_sequence(field.type_)
 
-    def is_scalar_sequence_field(field: ModelField | ModelField_V1) -> bool:
-        try:
+    def is_scalar_sequence_field(field: ModelField) -> bool:
+        if not field.is_pv1_proxy:
             return is_scalar_sequence_field_pv2(field)
-        except Exception:
-            return is_scalar_sequence_field_pv1(field)
+        else:
+            return is_scalar_sequence_field_pv1(field.model_field_pv1)
 
     def is_scalar_sequence_field_pv2(field: ModelField) -> bool:
         return field_annotation_is_scalar_sequence(field.field_info.annotation)
@@ -612,11 +597,11 @@ if PYDANTIC_V2:
     def is_scalar_sequence_field_pv1(field: ModelField_V1) -> bool:
         return is_pv1_scalar_sequence_field(field)
 
-    def is_bytes_field(field: ModelField | ModelField_V1) -> bool:
-        try:
+    def is_bytes_field(field: ModelField) -> bool:
+        if not field.is_pv1_proxy:
             return is_bytes_field_pv2(field)
-        except Exception:
-            return is_bytes_field_pv1(field)
+        else:
+            return is_bytes_field_pv1(field.model_field_pv1)
 
     def is_bytes_field_pv2(field: ModelField) -> bool:
         return is_bytes_or_nonable_bytes_annotation(field.type_)
@@ -624,11 +609,11 @@ if PYDANTIC_V2:
     def is_bytes_field_pv1(field: ModelField_V1) -> bool:
         return lenient_issubclass_pv1(field.type_, bytes)
 
-    def is_bytes_sequence_field(field: ModelField | ModelField_V1) -> bool:
-        try:
+    def is_bytes_sequence_field(field: ModelField) -> bool:
+        if not field.is_pv1_proxy:
             return is_bytes_sequence_field_pv2(field)
-        except Exception:
-            is_bytes_sequence_field_pv1(field)
+        else:
+            is_bytes_sequence_field_pv1(field.model_field_pv1)
 
     def is_bytes_sequence_field_pv2(field: ModelField) -> bool:
         return is_bytes_sequence_annotation(field.type_)
@@ -636,13 +621,13 @@ if PYDANTIC_V2:
     def is_bytes_sequence_field_pv1(field: ModelField_V1) -> bool:
         return field.shape in sequence_shapes_V1 and lenient_issubclass_pv1(field.type_, bytes)
 
-    def copy_field_info(*, field_info: FieldInfo | FieldInfo_V1, annotation: Any) -> FieldInfo:
+    def copy_field_info(*, field_info: FieldInfo, annotation: Any) -> FieldInfo:
         try:
             return copy_field_info_pv2(field_info=field_info, annotation=annotation)
         except Exception:
             return copy_field_info_pv1(field_info=field_info, annotation=annotation)
 
-    def copy_field_info_pv2(*, field_info: FieldInfo | FieldInfo_V1, annotation: Any) -> FieldInfo:
+    def copy_field_info_pv2(*, field_info: FieldInfo, annotation: Any) -> FieldInfo:
         cls = type(field_info)
         merged_field_info = cls.from_annotation(annotation)
         new_field_info = copy(field_info)
@@ -653,11 +638,11 @@ if PYDANTIC_V2:
     def copy_field_info_pv1(*, field_info: FieldInfo_V1, annotation: Any) -> FieldInfo:
         return copy(field_info)
 
-    def serialize_sequence_value(*, field: ModelField | ModelField_V1, value: Any) -> Sequence[Any]:
-        try:
+    def serialize_sequence_value(*, field: ModelField, value: Any) -> Sequence[Any]:
+        if not field.is_pv1_proxy:
             return serialize_sequence_value_pv2(field=field, value=value)
-        except Exception:
-            return serialize_sequence_value_pv1(field=field, value=value)
+        else:
+            return serialize_sequence_value_pv1(field=field.model_field_pv1, value=value)
 
     def serialize_sequence_value_pv2(*, field: ModelField, value: Any) -> Sequence[Any]:
         origin_type = (
@@ -689,12 +674,12 @@ if PYDANTIC_V2:
         return new_error.errors()[0]
 
     def create_body_model(
-        *, fields: Sequence[ModelField] | Sequence[ModelField_V1], model_name: str
+        *, fields: Sequence[ModelField], model_name: str
     ) -> Type[BaseModel] | Type[BaseModel_V1]:
         # TODO: handle error
-        try:
+        if not fields[0].is_pv1_proxy:
             return create_body_model_pv2(fields=fields, model_name=model_name)
-        except Exception:
+        else:
             return create_body_model_pv1(fields=fields, model_name=model_name)
 
     def create_body_model_pv2(

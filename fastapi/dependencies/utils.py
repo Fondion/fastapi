@@ -347,7 +347,7 @@ def analyze_param(
             ] = fastapi_specific_annotations[-1]
         else:
             fastapi_annotation = None
-        if isinstance(fastapi_annotation, FieldInfo):
+        if isinstance(fastapi_annotation, FieldInfo or FieldInfo_V1):
             # Copy `field_info` because we mutate `field_info.default` below.
             field_info = copy_field_info(
                 field_info=fastapi_annotation, annotation=use_annotation

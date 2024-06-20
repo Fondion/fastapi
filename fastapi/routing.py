@@ -133,7 +133,7 @@ async def serialize_response(
 ) -> Any:
     if field:
         errors = []
-        if not hasattr(field, "serialize"):
+        if not hasattr(field, "serialize") or field.is_pv1_proxy:
             # pydantic v1
             response_content = _prepare_response_content(
                 response_content,
@@ -156,7 +156,7 @@ async def serialize_response(
                 errors=_normalize_errors(errors), body=response_content
             )
 
-        if hasattr(field, "serialize"):
+        if hasattr(field, "serialize") and not field.is_pv1_proxy:
             return field.serialize(
                 value,
                 include=include,
