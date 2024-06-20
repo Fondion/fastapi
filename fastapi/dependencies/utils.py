@@ -381,7 +381,10 @@ def analyze_param(
         )
         field_info = value
         if PYDANTIC_V2:
-            field_info.annotation = type_annotation
+            try:
+                field_info.annotation = type_annotation
+            except Exception:
+                pass
 
     if depends is not None and depends.dependency is None:
         # Copy `depends` before mutating it

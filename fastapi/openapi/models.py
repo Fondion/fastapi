@@ -57,7 +57,11 @@ except ImportError:  # pragma: no cover
 
 class BaseModelWithConfig(BaseModel):
     if PYDANTIC_V2:
-        model_config = {"extra": "allow"}
+        try:
+            model_config = {"extra": "allow"}
+        except Exception:
+            class Config:
+                extra = "allow"
 
     else:
 

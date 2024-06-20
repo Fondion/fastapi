@@ -110,17 +110,21 @@ class Param(FieldInfo):
         else:
             kwargs["deprecated"] = deprecated
         if PYDANTIC_V2:
-            kwargs.update(
-                {
-                    "annotation": annotation,
-                    "alias_priority": alias_priority,
-                    "validation_alias": validation_alias,
-                    "serialization_alias": serialization_alias,
-                    "strict": strict,
-                    "json_schema_extra": current_json_schema_extra,
-                }
-            )
-            kwargs["pattern"] = pattern or regex
+            try:
+                kwargs.update(
+                    {
+                        "annotation": annotation,
+                        "alias_priority": alias_priority,
+                        "validation_alias": validation_alias,
+                        "serialization_alias": serialization_alias,
+                        "strict": strict,
+                        "json_schema_extra": current_json_schema_extra,
+                    }
+                )
+                kwargs["pattern"] = pattern or regex
+            except KeyError:
+                kwargs["regex"] = pattern or regex
+                kwargs.update(**current_json_schema_extra)
         else:
             kwargs["regex"] = pattern or regex
             kwargs.update(**current_json_schema_extra)
@@ -566,17 +570,21 @@ class Body(FieldInfo):
         else:
             kwargs["deprecated"] = deprecated
         if PYDANTIC_V2:
-            kwargs.update(
-                {
-                    "annotation": annotation,
-                    "alias_priority": alias_priority,
-                    "validation_alias": validation_alias,
-                    "serialization_alias": serialization_alias,
-                    "strict": strict,
-                    "json_schema_extra": current_json_schema_extra,
-                }
-            )
-            kwargs["pattern"] = pattern or regex
+            try:
+                kwargs.update(
+                    {
+                        "annotation": annotation,
+                        "alias_priority": alias_priority,
+                        "validation_alias": validation_alias,
+                        "serialization_alias": serialization_alias,
+                        "strict": strict,
+                        "json_schema_extra": current_json_schema_extra,
+                    }
+                )
+                kwargs["pattern"] = pattern or regex
+            except KeyError:
+                kwargs["regex"] = pattern or regex
+                kwargs.update(**current_json_schema_extra)
         else:
             kwargs["regex"] = pattern or regex
             kwargs.update(**current_json_schema_extra)
