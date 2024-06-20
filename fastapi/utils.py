@@ -24,9 +24,10 @@ from fastapi._compat import (
     UndefinedType,
     Validator,
     lenient_issubclass,
+    create_model_V1,
 )
 from fastapi.datastructures import DefaultPlaceholder, DefaultType
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from typing_extensions import Literal
 
@@ -146,7 +147,7 @@ def create_cloned_field(
         original_type = cast(Type[BaseModel_V1], original_type)
         use_type = cloned_types.get(original_type)
         if use_type is None:
-            use_type = create_model(original_type.__name__, __base__=original_type)
+            use_type = create_model_V1(original_type.__name__, __base__=original_type)
             cloned_types[original_type] = use_type
             for f in original_type.__fields__.values():
                 use_type.__fields__[f.name] = create_cloned_field(

@@ -695,6 +695,7 @@ else:
         BaseConfig as BaseConfig,  # noqa: F401
     )
     from pydantic import ValidationError as ValidationError  # noqa: F401
+    from pydantic import create_model as create_model_V1
     from pydantic.class_validators import (  # type: ignore[no-redef]
         Validator as Validator,  # noqa: F401
     )
