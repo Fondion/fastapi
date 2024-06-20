@@ -75,7 +75,8 @@ def create_response_field(
     Create a new response field. Raises if type_ is invalid.
     """
     class_validators = class_validators or {}
-    kwargs = {"name": name}
+    v2_kwargs = {"name": name}
+    v1_kwargs = {"name": name}
     if PYDANTIC_V2:
         from fastapi._compat import BaseModel_V1, FieldInfo_V1
         if lenient_issubclass(type_, BaseModel_V1):
@@ -86,13 +87,14 @@ def create_response_field(
             )
     else:
         field_info = field_info or FieldInfo()
-    kwargs.update({"field_info": field_info})
+    v2_kwargs.update({"field_info": field_info})
+    v1_kwargs.update({"field_info": field_info})
     if PYDANTIC_V2 and not lenient_issubclass(type_, BaseModel_V1):
-        kwargs.update(
+        v2_kwargs.update(
             {"mode": mode}
         )
     else:
-        kwargs.update(
+        v1_kwargs.update(
             {
                 "type_": type_,
                 "class_validators": class_validators,
@@ -106,10 +108,10 @@ def create_response_field(
         if PYDANTIC_V2:
             from fastapi._compat import BaseModel_V1, ModelField_V1
             if lenient_issubclass(type_, BaseModel_V1):
-                return ModelField(**kwargs, is_pv1_proxy=True, model_field_pv1=ModelField_V1(**kwargs))
+                return ModelField(**v2_kwargs, is_pv1_proxy=True, model_field_pv1=ModelField_V1(**v1_kwargs))
             else:
-                return ModelField(**kwargs)
-        return ModelField(**kwargs)  # type: ignore[arg-type]
+                return ModelField(**v2_kwargs)
+        return ModelField(**v1_kwargs)  # type: ignore[arg-type]
     except (RuntimeError, PydanticSchemaGenerationError):
         raise fastapi.exceptions.FastAPIError(
             "Invalid args for response field! Hint: "
