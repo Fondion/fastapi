@@ -162,9 +162,9 @@ def create_cloned_field(
     new_field = create_response_field(name=field.name, type_=use_type)
     if was_pv1_proxy:
         new_field.is_pv1_proxy = True
-        new_field.model_field_pv1.has_alias = field.has_alias  # type: ignore[attr-defined]
-        new_field.model_field_pv1.alias = field.alias  # type: ignore[misc]
-        new_field.model_field_pv1.class_validators = field.class_validators  # type: ignore[attr-defined]
+        new_field.has_alias = field.has_alias  # type: ignore[attr-defined]
+        new_field.alias = field.alias  # type: ignore[misc]
+        new_field.class_validators = field.class_validators  # type: ignore[attr-defined]
         new_field.model_field_pv1.default = field.default  # type: ignore[misc]
         new_field.model_field_pv1.required = field.required  # type: ignore[misc]
         new_field.model_field_pv1.model_config = field.model_config  # type: ignore[attr-defined]
