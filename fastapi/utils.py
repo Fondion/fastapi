@@ -23,7 +23,7 @@ from fastapi._compat import (
     Undefined,
     UndefinedType,
     Validator,
-    lenient_issubclass, ModelField_V1,
+    lenient_issubclass,
 )
 from fastapi.datastructures import DefaultPlaceholder, DefaultType
 from pydantic import BaseModel, create_model
@@ -83,19 +83,7 @@ def create_response_field(
         field_info = field_info or FieldInfo()
     kwargs = {"name": name, "field_info": field_info}
     if PYDANTIC_V2:
-        try:
-            kwargs.update({"mode": mode})
-        except KeyError:
-            kwargs.update(
-                {
-                    "type_": type_,
-                    "class_validators": class_validators,
-                    "default": default,
-                    "required": required,
-                    "model_config": model_config,
-                    "alias": alias,
-                }
-            )
+        kwargs.update({"mode": mode})
     else:
         kwargs.update(
             {
@@ -122,11 +110,11 @@ def create_response_field(
 
 
 def create_cloned_field(
-    field: ModelField | ModelField_V1,
+    field: ModelField,
     *,
     cloned_types: Optional[MutableMapping[Type[BaseModel], Type[BaseModel]]] = None,
 ) -> ModelField:
-    if PYDANTIC_V2 and isinstance(field, ModelField):
+    if PYDANTIC_V2:
         return field
     # cloned_types caches already cloned types to support recursive models and improve
     # performance by avoiding unnecessary cloning

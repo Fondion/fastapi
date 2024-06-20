@@ -538,7 +538,7 @@ if PYDANTIC_V2:
 
     def get_definitions_pv1(
         *,
-        fields: List[ModelField_V1],
+        fields: List[ModelField],
         schema_generator: GenerateJsonSchema_V1,
         model_name_map: ModelNameMap,
         separate_input_output_schemas: bool = True,
