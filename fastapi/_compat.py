@@ -170,9 +170,14 @@ if PYDANTIC_V2:
             return self.field_info.annotation
 
         def __post_init__(self) -> None:
-            self._type_adapter: TypeAdapter[Any] = TypeAdapter(
-                Annotated[self.field_info.annotation, self.field_info]
-            )
+            from pydantic import PydanticDeprecatedSince20
+
+            try:
+                self._type_adapter: TypeAdapter[Any] = TypeAdapter(
+                    Annotated[self.field_info.annotation, self.field_info]
+                )
+            except PydanticDeprecatedSince20:
+                pass
 
         def get_default(self) -> Any:
             if self.field_info.is_required():
@@ -195,6 +200,16 @@ if PYDANTIC_V2:
                 return None, _regenerate_error_with_loc(
                     errors=exc.errors(include_url=False), loc_prefix=loc
                 )
+            except AttributeError:
+                # pydantic v1
+                from pydantic import v1
+
+                try:
+                    return v1.parse_obj_as(self.type_, value), None
+                except v1.ValidationError as exc:
+                    return None, _regenerate_error_with_loc(
+                        errors=exc.errors(), loc_prefix=loc
+                    )
 
         def serialize(
             self,
@@ -210,16 +225,40 @@ if PYDANTIC_V2:
         ) -> Any:
             # What calls this code passes a value that already called
             # self._type_adapter.validate_python(value)
-            return self._type_adapter.dump_python(
-                value,
-                mode=mode,
-                include=include,
-                exclude=exclude,
-                by_alias=by_alias,
-                exclude_unset=exclude_unset,
-                exclude_defaults=exclude_defaults,
-                exclude_none=exclude_none,
-            )
+            try:
+                return self._type_adapter.dump_python(
+                    value,
+                    mode=mode,
+                    include=include,
+                    exclude=exclude,
+                    by_alias=by_alias,
+                    exclude_unset=exclude_unset,
+                    exclude_defaults=exclude_defaults,
+                    exclude_none=exclude_none,
+                )
+            except AttributeError:
+                # pydantic v1
+                try:
+                    return value.dict(
+                        include=include,
+                        exclude=exclude,
+                        by_alias=by_alias,
+                        exclude_unset=exclude_unset,
+                        exclude_defaults=exclude_defaults,
+                        exclude_none=exclude_none,
+                    )
+                except AttributeError:
+                    return [
+                        item.dict(
+                            include=include,
+                            exclude=exclude,
+                            by_alias=by_alias,
+                            exclude_unset=exclude_unset,
+                            exclude_defaults=exclude_defaults,
+                            exclude_none=exclude_none,
+                        )
+                        for item in value
+                    ]
 
         def __hash__(self) -> int:
             # Each ModelField is unique for our purposes, to allow making a dict from
@@ -243,7 +282,7 @@ if PYDANTIC_V2:
                 function, *args, ref=ref, metadata=metadata, serialization=serialization
             )
         # TODO: handle the error
-        except TypeError:
+        except Exception:
             return _with_info_plain_validator_function_pv1(
                 function, *args, ref=ref, metadata=metadata, serialization=serialization
             )
@@ -338,9 +377,9 @@ if PYDANTIC_V2:
     def _model_dump(
         model: BaseModel | BaseModel_V1, mode: Literal["json", "python"] = "json", **kwargs: Any
     ) -> Any:
-        if isinstance(model, BaseModel):
+        try:
             return _model_dump_pv2(model, mode=mode, **kwargs)
-        else:
+        except Exception:
             return _model_dump_pv1(model, mode=mode, **kwargs)
 
     def _model_dump_pv2(
@@ -354,9 +393,9 @@ if PYDANTIC_V2:
         return model.dict(**kwargs)
 
     def _get_model_config(model: BaseModel | BaseModel_V1) -> Any:
-        if isinstance(model, BaseModel):
+        try:
             return _get_model_config_pv2(model)
-        else:
+        except Exception:
             return _get_model_config_pv1(model)
 
     def _get_model_config_pv2(model: BaseModel) -> Any:
@@ -375,7 +414,7 @@ if PYDANTIC_V2:
         ],
         separate_input_output_schemas: bool = True,
     ) -> Dict[str, Any]:
-        if isinstance(field, ModelField):
+        try:
             return get_schema_from_model_field_pv2(
                 field=field,
                 schema_generator=schema_generator,
@@ -383,7 +422,7 @@ if PYDANTIC_V2:
                 field_mapping=field_mapping,
                 separate_input_output_schemas=separate_input_output_schemas,
             )
-        else:
+        except Exception:
             return get_schema_from_model_field_pv1(
                 field=field,
                 schema_generator=schema_generator,
@@ -391,6 +430,7 @@ if PYDANTIC_V2:
                 field_mapping=field_mapping,
                 separate_input_output_schemas=separate_input_output_schemas,
             )
+
 
     def get_schema_from_model_field_pv2(
         *,
@@ -431,11 +471,10 @@ if PYDANTIC_V2:
         )[0]
 
     def get_compat_model_name_map(fields: List[ModelField] | List[ModelField_V1]) -> ModelNameMap:
-        # TODO: handle access I presume
-        if isinstance(fields[0], ModelField):
-            return get_compat_model_name_map_pv2(fields)
-        else:
+        try:
             return get_compat_model_name_map_pv1(fields)
+        except Exception:
+            return get_compat_model_name_map_pv2(fields)
 
     def get_compat_model_name_map_pv2(fields: List[ModelField]) -> ModelNameMap:
         return {}
@@ -457,21 +496,21 @@ if PYDANTIC_V2:
         ],
         Dict[str, Dict[str, Any]],
     ]:
-        # TODO: handle access I presume
-        if isinstance(fields[0], ModelField):
+        try:
             return get_definitions_pv2(
                 fields=fields,
                 schema_generator=schema_generator,
                 model_name_map=model_name_map,
                 separate_input_output_schemas=separate_input_output_schemas,
             )
-        else:
+        except Exception:
             return get_definitions_pv1(
                 fields=fields,
                 schema_generator=schema_generator,
                 model_name_map=model_name_map,
                 separate_input_output_schemas=separate_input_output_schemas,
             )
+
 
     def get_definitions_pv2(
         *,
@@ -533,9 +572,9 @@ if PYDANTIC_V2:
 
 
     def is_scalar_field(field: ModelField | ModelField_V1) -> bool:
-        if isinstance(field, ModelField):
+        try:
             return is_scalar_field_pv2(field)
-        else:
+        except Exception:
             return is_scalar_field_pv1(field)
 
     def is_scalar_field_pv2(field: ModelField) -> bool:
@@ -550,9 +589,9 @@ if PYDANTIC_V2:
 
 
     def is_sequence_field(field: ModelField | ModelField_V1) -> bool:
-        if isinstance(field, ModelField):
+        try:
             return is_sequence_field_pv2(field)
-        else:
+        except Exception:
             return is_sequence_field_pv1(field)
 
     def is_sequence_field_pv2(field: ModelField) -> bool:
@@ -562,9 +601,9 @@ if PYDANTIC_V2:
         return field.shape in sequence_shapes or _annotation_is_sequence(field.type_)
 
     def is_scalar_sequence_field(field: ModelField | ModelField_V1) -> bool:
-        if isinstance(field, ModelField):
+        try:
             return is_scalar_sequence_field_pv2(field)
-        else:
+        except Exception:
             return is_scalar_sequence_field_pv1(field)
 
     def is_scalar_sequence_field_pv2(field: ModelField) -> bool:
@@ -574,9 +613,9 @@ if PYDANTIC_V2:
         return is_pv1_scalar_sequence_field(field)
 
     def is_bytes_field(field: ModelField | ModelField_V1) -> bool:
-        if isinstance(field, ModelField):
+        try:
             return is_bytes_field_pv2(field)
-        else:
+        except Exception:
             return is_bytes_field_pv1(field)
 
     def is_bytes_field_pv2(field: ModelField) -> bool:
@@ -586,10 +625,10 @@ if PYDANTIC_V2:
         return lenient_issubclass_pv1(field.type_, bytes)
 
     def is_bytes_sequence_field(field: ModelField | ModelField_V1) -> bool:
-        if isinstance(field, ModelField):
+        try:
             return is_bytes_sequence_field_pv2(field)
-        else:
-            return is_bytes_sequence_field_pv1(field)
+        except Exception:
+            is_bytes_sequence_field_pv1(field)
 
     def is_bytes_sequence_field_pv2(field: ModelField) -> bool:
         return is_bytes_sequence_annotation(field.type_)
@@ -597,10 +636,10 @@ if PYDANTIC_V2:
     def is_bytes_sequence_field_pv1(field: ModelField_V1) -> bool:
         return field.shape in sequence_shapes_V1 and lenient_issubclass_pv1(field.type_, bytes)
 
-    def copy_field_info(*, field_info: FieldInfo, annotation: Any) -> FieldInfo:
-        if isinstance(field_info, FieldInfo):
+    def copy_field_info(*, field_info: FieldInfo | FieldInfo_V1, annotation: Any) -> FieldInfo:
+        try:
             return copy_field_info_pv2(field_info=field_info, annotation=annotation)
-        else:
+        except Exception:
             return copy_field_info_pv1(field_info=field_info, annotation=annotation)
 
     def copy_field_info_pv2(*, field_info: FieldInfo | FieldInfo_V1, annotation: Any) -> FieldInfo:
@@ -615,9 +654,9 @@ if PYDANTIC_V2:
         return copy(field_info)
 
     def serialize_sequence_value(*, field: ModelField | ModelField_V1, value: Any) -> Sequence[Any]:
-        if isinstance(field, ModelField):
+        try:
             return serialize_sequence_value_pv2(field=field, value=value)
-        else:
+        except Exception:
             return serialize_sequence_value_pv1(field=field, value=value)
 
     def serialize_sequence_value_pv2(*, field: ModelField, value: Any) -> Sequence[Any]:
@@ -632,8 +671,10 @@ if PYDANTIC_V2:
 
 
     def get_missing_field_error(loc: Tuple[str, ...]) -> Dict[str, Any]:
-        # TODO: fill this out
-        return get_missing_field_error_pv2(loc)
+        try:
+            get_missing_field_error_pv2(loc)
+        except Exception:
+            return get_missing_field_error_pv1(loc)
 
     def get_missing_field_error_pv2(loc: Tuple[str, ...]) -> Dict[str, Any]:
         error = ValidationError.from_exception_data(
@@ -651,9 +692,9 @@ if PYDANTIC_V2:
         *, fields: Sequence[ModelField] | Sequence[ModelField_V1], model_name: str
     ) -> Type[BaseModel] | Type[BaseModel_V1]:
         # TODO: handle error
-        if isinstance(fields[0], ModelField):
+        try:
             return create_body_model_pv2(fields=fields, model_name=model_name)
-        else:
+        except Exception:
             return create_body_model_pv1(fields=fields, model_name=model_name)
 
     def create_body_model_pv2(
