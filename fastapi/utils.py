@@ -129,10 +129,14 @@ def create_cloned_field(
     field: ModelField,
     *,
     cloned_types: Optional[MutableMapping[Type[BaseModel], Type[BaseModel]]] = None,
+    first_entry: bool = True,
 ) -> ModelField:
+    first_entry = first_entry
     if PYDANTIC_V2:
-        if not field.is_pv1_proxy:
-            return field
+        if first_entry:
+            if not field.is_pv1_proxy:
+                return field
+        first_entry = False
         from fastapi._compat import BaseModel_V1
     # cloned_types caches already cloned types to support recursive models and improve
     # performance by avoiding unnecessary cloning
@@ -151,7 +155,7 @@ def create_cloned_field(
             cloned_types[original_type] = use_type
             for f in original_type.__fields__.values():
                 use_type.__fields__[f.name] = create_cloned_field(
-                    f, cloned_types=cloned_types
+                    f, cloned_types=cloned_types, first_entry=first_entry
                 )
     new_field = create_response_field(name=field.name, type_=use_type)
     new_field.has_alias = field.has_alias  # type: ignore[attr-defined]
