@@ -137,7 +137,7 @@ def create_cloned_field(
         if first_entry:
             if not field.is_pv1_proxy:
                 return field
-        was_pv1_proxy = was_pv1_proxy
+        was_pv1_proxy = True
         first_entry = False
         from fastapi._compat import BaseModel_V1
     # cloned_types caches already cloned types to support recursive models and improve
