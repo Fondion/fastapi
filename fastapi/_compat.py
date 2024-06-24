@@ -141,11 +141,43 @@ if PYDANTIC_V2:
 
     @dataclass
     class ModelField:
-        name: str
-        field_info: FieldInfo
+        _name: str
+        _field_info: FieldInfo | None
         mode: Literal["validation", "serialization"] = "validation"
         model_field_pv1: ModelField_V1 | None = None
         is_pv1_proxy: bool = False
+
+        def __getattr__(self, item):
+            if self.is_pv1_proxy:
+                if self.model_field_pv1 is None:
+                    raise AttributeError(item)
+                return getattr(self.model_field_pv1, item)
+
+        @property
+        def field_info(self) -> FieldInfo | FieldInfo_V1:
+            if self.is_pv1_proxy:
+                return self.model_field_pv1.field_info
+            return self.field_info
+
+        @field_info.setter
+        def field_info(self, value: FieldInfo | FieldInfo_V1) -> None:
+            if self.is_pv1_proxy:
+                self.model_field_pv1.field_info = value
+            else:
+                self._field_info = value
+
+        @property
+        def name(self) -> str:
+            if self.is_pv1_proxy:
+                return self.model_field_pv1.name
+            return self._name
+
+        @name.setter
+        def name(self, value: str) -> None:
+            if self.is_pv1_proxy:
+                self.model_field_pv1.name = value
+            else:
+                self._name = value
 
         @property
         def alias(self) -> str:
