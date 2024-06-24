@@ -445,7 +445,7 @@ def get_fields_from_routes(
                 callback_flat_models.extend(v2_models)
                 callback_flat_models_v1.extend(v1_models)
             params = get_flat_params(route.dependant)
-            if route.dependant.is_pv2_request:
+            if not route.dependant.is_pv1_request:
                 request_fields_from_routes.extend(params)
             else:
                 request_fields_from_routes_v1.extend(params)

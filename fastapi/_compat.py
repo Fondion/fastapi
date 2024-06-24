@@ -159,7 +159,7 @@ if PYDANTIC_V2:
         def field_info(self) -> FieldInfo | FieldInfo_V1:
             if self.is_pv1_proxy:
                 return self.model_field_pv1.field_info
-            return self.field_info
+            return self._field_info
 
         @field_info.setter
         def field_info(self, value: FieldInfo | FieldInfo_V1) -> None:
