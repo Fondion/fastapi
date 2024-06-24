@@ -125,6 +125,8 @@ def create_response_field(
                 print(f"------------------- KWARGS MODEL FIELD -------------------")
                 for item, value in v2_kwargs.items():
                     print(f"{item}: {value}")
+                for item, value in v1_kwargs.items():
+                    print(f"{item}: {value}")
                 print("----------------------- END -----------------------")
                 proxy = ModelField_V1(**v1_kwargs)
                 return ModelField(**v2_kwargs, is_pv1_proxy=True, model_field_pv1=proxy)
