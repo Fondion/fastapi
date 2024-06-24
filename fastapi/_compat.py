@@ -649,12 +649,12 @@ if PYDANTIC_V2:
         return field.shape in sequence_shapes_V1 and lenient_issubclass_pv1(field.type_, bytes)
 
     def copy_field_info(*, field_info: FieldInfo, annotation: Any) -> FieldInfo:
-        try:
+        if isinstance(field_info, FieldInfo_V2):
             return copy_field_info_pv2(field_info=field_info, annotation=annotation)
-        except Exception:
+        else:
             return copy_field_info_pv1(field_info=field_info, annotation=annotation)
 
-    def copy_field_info_pv2(*, field_info: FieldInfo, annotation: Any) -> FieldInfo:
+    def copy_field_info_pv2(*, field_info: FieldInfo_V2, annotation: Any) -> FieldInfo:
         cls = type(field_info)
         merged_field_info = cls.from_annotation(annotation)
         new_field_info = copy(field_info)
