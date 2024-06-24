@@ -139,13 +139,15 @@ if PYDANTIC_V2:
         SHAPE_TUPLE_ELLIPSIS_V1: list,
     }
 
-    @dataclass
     class ModelField:
-        _name: str
-        _field_info: FieldInfo | None
-        mode: Literal["validation", "serialization"] = "validation"
-        model_field_pv1: ModelField_V1 | None = None
-        is_pv1_proxy: bool = False
+
+        def __init__(self, name: str, field_info: FieldInfo | None = None, mode: str = "validation", model_field_pv1: ModelField_V1 | None = None, is_pv1_proxy: bool = False):
+            self._name = name
+            self._field_info = field_info
+            self.mode = mode
+            self.model_field_pv1 = model_field_pv1
+            self.is_pv1_proxy = is_pv1_proxy
+            self._post_init()
 
         def __getattr__(self, item):
             if self.is_pv1_proxy:
@@ -204,7 +206,7 @@ if PYDANTIC_V2:
                 return self.model_field_pv1.type_
             return self.field_info.annotation
 
-        def __post_init__(self) -> None:
+        def _post_init(self) -> None:
             if self.is_pv1_proxy:
                 return
             self._type_adapter: TypeAdapter[Any] = TypeAdapter(
