@@ -445,6 +445,8 @@ def analyze_param(
         else:
             alias = field_info.alias or param_name
         field_info.alias = alias
+        print(f"field_info: {field_info}")
+        print(f"use_annotation_from_field_info: {use_annotation_from_field_info}")
         field = create_response_field(
             name=param_name,
             type_=use_annotation_from_field_info,
