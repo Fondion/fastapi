@@ -90,10 +90,12 @@ def create_response_field(
         field_info = field_info or FieldInfo()
     v2_kwargs.update({"field_info": field_info})
     v1_kwargs.update({"field_info": field_info})
-    if PYDANTIC_V2 and not lenient_issubclass(type_, BaseModel_V1):
-        v2_kwargs.update(
-            {"mode": mode}
-        )
+    if PYDANTIC_V2:
+        from fastapi._compat import BaseModel_V1
+        if not lenient_issubclass(type_, BaseModel_V1):
+            v2_kwargs.update(
+                {"mode": mode}
+            )
     else:
         v1_kwargs.update(
             {
