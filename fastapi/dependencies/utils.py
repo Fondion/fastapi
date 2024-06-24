@@ -23,6 +23,7 @@ from fastapi._compat import (
     PYDANTIC_V2,
     ErrorWrapper,
     ModelField,
+    FieldInfo_V1,
     Required,
     Undefined,
     _regenerate_error_with_loc,
