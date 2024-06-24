@@ -136,93 +136,95 @@ def create_cloned_field(
 ) -> ModelField:
     first_entry = first_entry
     if PYDANTIC_V2:
-        if first_entry:
-            if not field.is_pv1_proxy:
-                return field
-        was_pv1_proxy = True
-        from fastapi._compat import BaseModel_V1
-    # cloned_types caches already cloned types to support recursive models and improve
-    # performance by avoiding unnecessary cloning
-    if cloned_types is None:
-        cloned_types = _CLONED_TYPES_CACHE
-
-    original_type = field.model_field_pv1.type_ if was_pv1_proxy and first_entry else field.type_
-    if is_dataclass(original_type) and hasattr(original_type, "__pydantic_model__"):
-        original_type = original_type.__pydantic_model__
-    use_type = original_type
-    if lenient_issubclass(original_type, (BaseModel, BaseModel_V1)):
-        original_type = cast(Type[BaseModel_V1], original_type)
-        use_type = cloned_types.get(original_type)
-        if use_type is None:
-            use_type = create_model_V1(original_type.__name__, __base__=original_type)
-            cloned_types[original_type] = use_type
-            first_entry = False
-            for f in original_type.__fields__.values():
-                use_type.__fields__[f.name] = create_cloned_field(
-                    f, cloned_types=cloned_types, first_entry=first_entry, was_pv1_proxy=was_pv1_proxy
-                )
-    new_field = create_response_field(name=field.name, type_=use_type)
-    if was_pv1_proxy:
-        new_field.is_pv1_proxy = True
-        new_field.has_alias = field.has_alias  # type: ignore[attr-defined]
-        new_field.alias = field.alias  # type: ignore[misc]
-        new_field.class_validators = field.class_validators  # type: ignore[attr-defined]
-        new_field.model_field_pv1.default = field.default  # type: ignore[misc]
-        new_field.model_field_pv1.required = field.required  # type: ignore[misc]
-        new_field.model_field_pv1.model_config = field.model_config  # type: ignore[attr-defined]
-        new_field.model_field_pv1.field_info = field.field_info
-        new_field.model_field_pv1.allow_none = field.allow_none  # type: ignore[attr-defined]
-        new_field.model_field_pv1.validate_always = field.validate_always  # type: ignore[attr-defined]
-    else:
-        new_field.has_alias = field.has_alias
-        new_field.alias = field.alias
-        new_field.class_validators = field.class_validators
-        new_field.default = field.default
-        new_field.required = field.required
-        new_field.model_config = field.model_config
-        new_field.field_info = field.field_info
-        new_field.allow_none = field.allow_none
-        new_field.validate_always = field.validate_always
-    if field.sub_fields:  # type: ignore[attr-defined]
-        if was_pv1_proxy:
-            new_field.model_field_pv1.sub_fields = [  # type: ignore[attr-defined]
-                create_cloned_field(sub_field, cloned_types=cloned_types, first_entry=first_entry, was_pv1_proxy=was_pv1_proxy)
-                for sub_field in field.sub_fields  # type: ignore[attr-defined]
-            ]
-        else:
-            new_field.sub_fields = [  # type: ignore[attr-defined]
-                create_cloned_field(sub_field, cloned_types=cloned_types, first_entry=first_entry, was_pv1_proxy=was_pv1_proxy)
-                for sub_field in field.sub_fields  # type: ignore[attr-defined]
-            ]
-    if was_pv1_proxy:
-        new_field.model_field_pv1.key_field = create_cloned_field(  # type: ignore[attr-defined]
-            field.model_field_pv1.key_field,  # type: ignore[attr-defined]
-            cloned_types=cloned_types,
-            first_entry=first_entry,
-            was_pv1_proxy=was_pv1_proxy,
-        )
-    else:
-        new_field.key_field = create_cloned_field(  # type: ignore[attr-defined]
-            field.key_field,  # type: ignore[attr-defined]
-            cloned_types=cloned_types,
-            first_entry=first_entry,
-            was_pv1_proxy=was_pv1_proxy,
-        )
-    if was_pv1_proxy:
-        new_field.model_field_pv1.validators = field.validators  # type: ignore[attr-defined]
-        new_field.model_field_pv1.pre_validators = field.pre_validators  # type: ignore[attr-defined]
-        new_field.model_field_pv1.post_validators = field.post_validators  # type: ignore[attr-defined]
-        new_field.model_field_pv1.parse_json = field.parse_json  # type: ignore[attr-defined]
-        new_field.model_field_pv1.shape = field.shape  # type: ignore[attr-defined]
-        new_field.model_field_pv1.populate_validators()  # type: ignore[attr-defined]
-    else:
-        new_field.validators = field.validators  # type: ignore[attr-defined]
-        new_field.pre_validators = field.pre_validators  # type: ignore[attr-defined]
-        new_field.post_validators = field.post_validators  # type: ignore[attr-defined]
-        new_field.parse_json = field.parse_json  # type: ignore[attr-defined]
-        new_field.shape = field.shape  # type: ignore[attr-defined]
-        new_field.populate_validators()  # type: ignore[attr-defined]
-    return new_field
+        return field
+    #     return field
+    #     if first_entry:
+    #         if not field.is_pv1_proxy:
+    #             return field
+    #     was_pv1_proxy = True
+    #     from fastapi._compat import BaseModel_V1
+    # # cloned_types caches already cloned types to support recursive models and improve
+    # # performance by avoiding unnecessary cloning
+    # if cloned_types is None:
+    #     cloned_types = _CLONED_TYPES_CACHE
+    #
+    # original_type = field.model_field_pv1.type_ if was_pv1_proxy and first_entry else field.type_
+    # if is_dataclass(original_type) and hasattr(original_type, "__pydantic_model__"):
+    #     original_type = original_type.__pydantic_model__
+    # use_type = original_type
+    # if lenient_issubclass(original_type, (BaseModel, BaseModel_V1)):
+    #     original_type = cast(Type[BaseModel_V1], original_type)
+    #     use_type = cloned_types.get(original_type)
+    #     if use_type is None:
+    #         use_type = create_model_V1(original_type.__name__, __base__=original_type)
+    #         cloned_types[original_type] = use_type
+    #         first_entry = False
+    #         for f in original_type.__fields__.values():
+    #             use_type.__fields__[f.name] = create_cloned_field(
+    #                 f, cloned_types=cloned_types, first_entry=first_entry, was_pv1_proxy=was_pv1_proxy
+    #             )
+    # new_field = create_response_field(name=field.name, type_=use_type)
+    # if was_pv1_proxy:
+    #     new_field.is_pv1_proxy = True
+    #     new_field.model_field_pv1.has_alias = field.model_field_pv1.has_alias  # type: ignore[attr-defined]
+    #     new_field.alias = field.alias  # type: ignore[misc]
+    #     new_field.class_validators = field.class_validators  # type: ignore[attr-defined]
+    #     new_field.model_field_pv1.default = field.default  # type: ignore[misc]
+    #     new_field.model_field_pv1.required = field.required  # type: ignore[misc]
+    #     new_field.model_field_pv1.model_config = field.model_config  # type: ignore[attr-defined]
+    #     new_field.model_field_pv1.field_info = field.field_info
+    #     new_field.model_field_pv1.allow_none = field.allow_none  # type: ignore[attr-defined]
+    #     new_field.model_field_pv1.validate_always = field.validate_always  # type: ignore[attr-defined]
+    # else:
+    #     new_field.has_alias = field.has_alias
+    #     new_field.alias = field.alias
+    #     new_field.class_validators = field.class_validators
+    #     new_field.default = field.default
+    #     new_field.required = field.required
+    #     new_field.model_config = field.model_config
+    #     new_field.field_info = field.field_info
+    #     new_field.allow_none = field.allow_none
+    #     new_field.validate_always = field.validate_always
+    # if field.sub_fields:  # type: ignore[attr-defined]
+    #     if was_pv1_proxy:
+    #         new_field.model_field_pv1.sub_fields = [  # type: ignore[attr-defined]
+    #             create_cloned_field(sub_field, cloned_types=cloned_types, first_entry=first_entry, was_pv1_proxy=was_pv1_proxy)
+    #             for sub_field in field.sub_fields  # type: ignore[attr-defined]
+    #         ]
+    #     else:
+    #         new_field.sub_fields = [  # type: ignore[attr-defined]
+    #             create_cloned_field(sub_field, cloned_types=cloned_types, first_entry=first_entry, was_pv1_proxy=was_pv1_proxy)
+    #             for sub_field in field.sub_fields  # type: ignore[attr-defined]
+    #         ]
+    # if was_pv1_proxy:
+    #     new_field.model_field_pv1.key_field = create_cloned_field(  # type: ignore[attr-defined]
+    #         field.model_field_pv1.key_field,  # type: ignore[attr-defined]
+    #         cloned_types=cloned_types,
+    #         first_entry=first_entry,
+    #         was_pv1_proxy=was_pv1_proxy,
+    #     )
+    # else:
+    #     new_field.key_field = create_cloned_field(  # type: ignore[attr-defined]
+    #         field.key_field,  # type: ignore[attr-defined]
+    #         cloned_types=cloned_types,
+    #         first_entry=first_entry,
+    #         was_pv1_proxy=was_pv1_proxy,
+    #     )
+    # if was_pv1_proxy:
+    #     new_field.model_field_pv1.validators = field.validators  # type: ignore[attr-defined]
+    #     new_field.model_field_pv1.pre_validators = field.pre_validators  # type: ignore[attr-defined]
+    #     new_field.model_field_pv1.post_validators = field.post_validators  # type: ignore[attr-defined]
+    #     new_field.model_field_pv1.parse_json = field.parse_json  # type: ignore[attr-defined]
+    #     new_field.model_field_pv1.shape = field.shape  # type: ignore[attr-defined]
+    #     new_field.model_field_pv1.populate_validators()  # type: ignore[attr-defined]
+    # else:
+    #     new_field.validators = field.validators  # type: ignore[attr-defined]
+    #     new_field.pre_validators = field.pre_validators  # type: ignore[attr-defined]
+    #     new_field.post_validators = field.post_validators  # type: ignore[attr-defined]
+    #     new_field.parse_json = field.parse_json  # type: ignore[attr-defined]
+    #     new_field.shape = field.shape  # type: ignore[attr-defined]
+    #     new_field.populate_validators()  # type: ignore[attr-defined]
+    # return new_field
 
 
 def generate_operation_id_for_path(
