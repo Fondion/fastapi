@@ -322,6 +322,10 @@ def analyze_param(
     value: Any,
     is_path_param: bool,
 ) -> Tuple[Any, Optional[params.Depends], Optional[ModelField]]:
+    print(f"analyze_param param_name: {param_name}")
+    print(f"analyze_param annotation: {annotation}")
+    print(f"analyze_param value: {value}")
+    print(f"analyze_param is_path_param: {is_path_param}")
     field_info = None
     depends = None
     type_annotation: Any = Any
@@ -348,7 +352,7 @@ def analyze_param(
             ] = fastapi_specific_annotations[-1]
         else:
             fastapi_annotation = None
-        if isinstance(fastapi_annotation, FieldInfo or FieldInfo_V1):
+        if isinstance(fastapi_annotation, FieldInfo):
             # Copy `field_info` because we mutate `field_info.default` below.
             field_info = copy_field_info(
                 field_info=fastapi_annotation, annotation=use_annotation

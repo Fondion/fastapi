@@ -55,7 +55,7 @@ if PYDANTIC_V2:
     )
     from pydantic._internal._typing_extra import eval_type_lenient
     from pydantic._internal._utils import lenient_issubclass as lenient_issubclass
-    from pydantic.fields import FieldInfo
+    from pydantic.fields import FieldInfo as FieldInfo_V2
     from pydantic.json_schema import GenerateJsonSchema as GenerateJsonSchema
     from pydantic.json_schema import JsonSchemaValue as JsonSchemaValue
     from pydantic_core import CoreSchema as CoreSchema
@@ -109,6 +109,8 @@ if PYDANTIC_V2:
     Required = PydanticUndefined
     Undefined = PydanticUndefined
     UndefinedType = PydanticUndefinedType
+
+    FieldInfo: TypeAlias = FieldInfo_V2 | FieldInfo_V1
 
     def evaluate_forwardref(value: Any, globalns: dict[str, Any] | None = None, localns: dict[str, Any] | None = None) -> Any:
         try:
