@@ -122,7 +122,12 @@ def create_response_field(
         if PYDANTIC_V2:
             from fastapi._compat import BaseModel_V1, ModelField_V1
             if lenient_issubclass(type_, BaseModel_V1):
-                return ModelField(**v2_kwargs, is_pv1_proxy=True, model_field_pv1=ModelField_V1(**v1_kwargs))
+                print(f"------------------- KWARGS MODEL FIELD -------------------")
+                for item, value in v2_kwargs.items():
+                    print(f"{item}: {value}")
+                print("----------------------- END -----------------------")
+                proxy = ModelField_V1(**v1_kwargs)
+                return ModelField(**v2_kwargs, is_pv1_proxy=True, model_field_pv1=proxy)
             else:
                 return ModelField(**v2_kwargs)
         return ModelField(**v1_kwargs)  # type: ignore[arg-type]

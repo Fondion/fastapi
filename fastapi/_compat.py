@@ -276,9 +276,9 @@ if PYDANTIC_V2:
     def get_annotation_from_field_info(
         annotation: Any, field_info: FieldInfo, field_name: str
     ) -> Any:
-        try:
+        if isinstance(field_info, FieldInfo_V1):
             return get_annotation_from_field_info_pv1(annotation, field_info, field_name)
-        except Exception:
+        else:
             return annotation
 
     def with_info_plain_validator_function(
