@@ -76,7 +76,7 @@ if PYDANTIC_V2:
     from pydantic.v1 import create_model as create_model_V1
     from fastapi.openapi.constants import REF_PREFIX as REF_PREFIX_V1
     from pydantic.v1 import AnyUrl as Url_V1
-    from pydantic.v1 import BaseConfig
+    from pydantic.v1 import BaseConfig as BaseConfig
     from pydantic.v1 import ValidationError as ValidationError_V1
     from pydantic.v1.class_validators import Validator as Validator_V1
     from pydantic.v1.error_wrappers import ErrorWrapper
@@ -92,9 +92,9 @@ if PYDANTIC_V2:
     )
     from pydantic.v1.fields import FieldInfo as FieldInfo_V1
     from pydantic.v1.fields import ModelField as ModelField_V1
-    from pydantic.v1.fields import Required as Required_V1
-    from pydantic.v1.fields import Undefined as Undefined_V1
-    from pydantic.v1.fields import UndefinedType as UndefinedType_V1
+    from pydantic.v1.fields import Required as Required
+    from pydantic.v1.fields import Undefined as Undefined
+    from pydantic.v1.fields import UndefinedType as UndefinedType
     from pydantic.v1.schema import (
         field_schema as field_schema_pv1,
         get_flat_models_from_fields as get_flat_models_from_fields_pv1,
@@ -106,9 +106,9 @@ if PYDANTIC_V2:
     from pydantic.v1.utils import lenient_issubclass as lenient_issubclass_pv1
 
     # V2
-    Required = PydanticUndefined
-    Undefined = PydanticUndefined
-    UndefinedType = PydanticUndefinedType
+    Required_V2 = PydanticUndefined
+    Undefined_V2 = PydanticUndefined
+    UndefinedType_V2 = PydanticUndefinedType
 
     FieldInfo: TypeAlias = FieldInfo_V2 | FieldInfo_V1
 
