@@ -96,16 +96,17 @@ def create_response_field(
             v2_kwargs.update(
                 {"mode": mode}
             )
-        v1_kwargs.update(
-            {
-                "type_": type_,
-                "class_validators": class_validators,
-                "default": default,
-                "required": required,
-                "model_config": model_config,
-                "alias": alias,
-            }
-        )
+        else:
+            v1_kwargs.update(
+                {
+                    "type_": type_,
+                    "class_validators": class_validators,
+                    "default": default,
+                    "required": required,
+                    "model_config": model_config,
+                    "alias": alias,
+                }
+            )
     else:
         v1_kwargs.update(
             {
