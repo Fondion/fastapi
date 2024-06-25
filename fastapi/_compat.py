@@ -18,7 +18,6 @@ from typing import (
     TypeAlias
 )
 
-from fastapi.exceptions import RequestErrorModel, RequestErrorModel_V1
 from fastapi.types import IncEx, ModelNameMap, UnionType
 from pydantic.version import VERSION as P_VERSION
 from starlette.datastructures import UploadFile
@@ -108,6 +107,12 @@ if PYDANTIC_V2:
     from pydantic.v1.schema import get_annotation_from_field_info as get_annotation_from_field_info_pv1
     from pydantic.v1.typing import evaluate_forwardref as evaluate_forwardref_pv1
     from pydantic.v1.utils import lenient_issubclass as lenient_issubclass_pv1
+
+    # Exceptions
+    RequestErrorModel: Type[BaseModel] = create_model("Request")
+    RequestErrorModel_V1: Type[BaseModel_V1] = create_model_V1("Request")
+    WebSocketErrorModel: Type[BaseModel] = create_model("WebSocket")
+    WebSocketErrorModel_V1: Type[BaseModel_V1] = create_model_V1("WebSocket")
 
     # V2
     Required_V2 = PydanticUndefined
