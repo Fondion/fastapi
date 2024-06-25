@@ -433,12 +433,12 @@ def analyze_param(
     field = None
     if field_info is not None:
         if is_path_param:
-            assert isinstance(field_info, params.Path), (
+            assert isinstance(field_info, (params.Path, params.Path_V1)), (
                 f"Cannot use `{field_info.__class__.__name__}` for path param"
                 f" {param_name!r}"
             )
         elif (
-            isinstance(field_info, params.Param)
+            isinstance(field_info, (params.Param, params.Param_V1))
             and getattr(field_info, "in_", None) is None
         ):
             field_info.in_ = params.ParamTypes.query
