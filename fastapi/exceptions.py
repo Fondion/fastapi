@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional, Sequence, Type, Union
 
-from pydantic import BaseModel, create_model
+from _compat import BaseModel, BaseModel_V1, create_model, create_model_V1
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.exceptions import WebSocketException as StarletteWebSocketException
 from typing_extensions import Annotated, Doc
@@ -137,7 +137,9 @@ class WebSocketException(StarletteWebSocketException):
 
 
 RequestErrorModel: Type[BaseModel] = create_model("Request")
+RequestErrorModel_V1: Type[BaseModel_V1] = create_model_V1("Request")
 WebSocketErrorModel: Type[BaseModel] = create_model("WebSocket")
+WebSocketErrorModel_V1: Type[BaseModel_V1] = create_model_V1("WebSocket")
 
 
 class FastAPIError(RuntimeError):

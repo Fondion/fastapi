@@ -14,17 +14,16 @@ from ipaddress import (
 from pathlib import Path, PurePath
 from re import Pattern
 from types import GeneratorType
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, NamedTuple
 from uuid import UUID
 
 from fastapi.types import IncEx
-from pydantic import BaseModel
 from pydantic.color import Color
 from pydantic.networks import AnyUrl, NameEmail
 from pydantic.types import SecretBytes, SecretStr
 from typing_extensions import Annotated, Doc
 
-from ._compat import PYDANTIC_V2, UndefinedType, Url, _model_dump
+from ._compat import BaseModel, BaseModel_V1, PYDANTIC_V2, UndefinedType, Url, _model_dump
 
 
 # Taken from Pydantic v1 as is
@@ -213,10 +212,10 @@ def jsonable_encoder(
         include = set(include)
     if exclude is not None and not isinstance(exclude, (set, dict)):
         exclude = set(exclude)
-    if isinstance(obj, BaseModel):
+    if isinstance(obj, (BaseModel, BaseModel_V1)):
         # TODO: remove when deprecating Pydantic v1
         encoders: Dict[Any, Any] = {}
-        if not PYDANTIC_V2:
+        if not PYDANTIC_V2 or isinstance(obj, BaseModel_V1):
             encoders = getattr(obj.__config__, "json_encoders", {})  # type: ignore[attr-defined]
             if custom_encoder:
                 encoders.update(custom_encoder)
@@ -238,6 +237,20 @@ def jsonable_encoder(
             exclude_defaults=exclude_defaults,
             # TODO: remove when deprecating Pydantic v1
             custom_encoder=encoders,
+            sqlalchemy_safe=sqlalchemy_safe,
+        )
+    # OpenAPI models
+    if isinstance(obj, NamedTuple):
+        obj_dict = obj._asdict()
+        return jsonable_encoder(
+            obj_dict,
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+            custom_encoder=custom_encoder,
             sqlalchemy_safe=sqlalchemy_safe,
         )
     if dataclasses.is_dataclass(obj):

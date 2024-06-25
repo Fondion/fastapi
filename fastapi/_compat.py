@@ -18,9 +18,8 @@ from typing import (
     TypeAlias
 )
 
-from fastapi.exceptions import RequestErrorModel
+from fastapi.exceptions import RequestErrorModel, RequestErrorModel_V1
 from fastapi.types import IncEx, ModelNameMap, UnionType
-from pydantic import BaseModel, create_model
 from pydantic.version import VERSION as P_VERSION
 from starlette.datastructures import UploadFile
 from typing_extensions import Annotated, Literal, get_args, get_origin
@@ -47,12 +46,15 @@ sequence_annotation_to_type = {
 sequence_types = tuple(sequence_annotation_to_type.keys())
 
 if PYDANTIC_V2:
+    from pydantic import AnyUrl
+    from pydantic import BaseModel, create_model
     from pydantic import PydanticSchemaGenerationError as PydanticSchemaGenerationError
     from pydantic import TypeAdapter
     from pydantic import ValidationError as ValidationError
     from pydantic._internal._schema_generation_shared import (  # type: ignore[attr-defined]
         GetJsonSchemaHandler as GetJsonSchemaHandler,
     )
+    from pydantic import Field
     from pydantic._internal._typing_extra import eval_type_lenient
     from pydantic._internal._utils import lenient_issubclass as lenient_issubclass
     from pydantic.fields import FieldInfo as FieldInfo_V2
@@ -72,8 +74,10 @@ if PYDANTIC_V2:
         )
 
     # pydantic v1 imports sourced from v2 to support simultaneous use
+    from pydantic.v1 import AnyUrl as AnyUrl_V1
     from pydantic.v1 import BaseModel as BaseModel_V1
     from pydantic.v1 import create_model as create_model_V1
+    from pydantic.v1 import Field as Field_V1
     from fastapi.openapi.constants import REF_PREFIX as REF_PREFIX_V1
     from pydantic.v1 import AnyUrl as Url_V1
     from pydantic.v1 import BaseConfig as BaseConfig
@@ -364,7 +368,7 @@ if PYDANTIC_V2:
         for error in errors:
             if isinstance(error, ErrorWrapper):
                 new_errors = ValidationError_V1(  # type: ignore[call-arg]
-                    errors=[error], model=RequestErrorModel
+                    errors=[error], model=RequestErrorModel_V1
                 ).errors()
                 use_errors.extend(new_errors)
             elif isinstance(error, list):

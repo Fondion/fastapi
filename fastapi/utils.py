@@ -16,6 +16,9 @@ from weakref import WeakKeyDictionary
 
 import fastapi
 from fastapi._compat import (
+    BaseModel,
+    BaseModel_V1,
+    FieldInfo,
     PYDANTIC_V2,
     BaseConfig,
     ModelField,
@@ -27,14 +30,12 @@ from fastapi._compat import (
     create_model_V1,
 )
 from fastapi.datastructures import DefaultPlaceholder, DefaultType
-from pydantic import BaseModel
-from pydantic.fields import FieldInfo
 from typing_extensions import Literal
 
 if TYPE_CHECKING:  # pragma: nocover
     from .routing import APIRoute
 
-# Cache for `create_cloned_field`
+# Cache for `create_cloned_field` only for pydantic v1
 _CLONED_TYPES_CACHE: MutableMapping[
     Type[BaseModel], Type[BaseModel]
 ] = WeakKeyDictionary()

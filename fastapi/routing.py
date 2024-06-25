@@ -21,6 +21,8 @@ from typing import (
 
 from fastapi import params
 from fastapi._compat import (
+    BaseModel,
+    BaseModel_V1,
     ModelField,
     Undefined,
     _get_model_config,
@@ -52,7 +54,6 @@ from fastapi.utils import (
     get_value_or_default,
     is_body_allowed_for_status_code,
 )
-from pydantic import BaseModel
 from starlette import routing
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException
@@ -79,7 +80,7 @@ def _prepare_response_content(
     exclude_defaults: bool = False,
     exclude_none: bool = False,
 ) -> Any:
-    if isinstance(res, BaseModel):
+    if isinstance(res, (BaseModel, BaseModel_V1)):
         read_with_orm_mode = getattr(_get_model_config(res), "read_with_orm_mode", None)
         if read_with_orm_mode:
             # Let from_orm extract the data from this model instead of converting
