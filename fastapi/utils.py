@@ -19,6 +19,8 @@ from fastapi._compat import (
     BaseModel,
     BaseModel_V1,
     FieldInfo,
+    FieldInfo_V1,
+    FieldInfo_V2,
     PYDANTIC_V2,
     BaseConfig,
     ModelField,
@@ -84,7 +86,7 @@ def create_response_field(
         if lenient_issubclass(type_, BaseModel_V1):
             field_info = field_info or FieldInfo_V1()
         else:
-            field_info = field_info or FieldInfo(
+            field_info = field_info or FieldInfo_V2(
                 annotation=type_, default=default, alias=alias
             )
     else:
