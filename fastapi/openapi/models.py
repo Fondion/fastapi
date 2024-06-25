@@ -676,8 +676,8 @@ class OpenIdConnect_V1(SecurityBase_V1):
     openIdConnectUrl: str
 
 
-SecurityScheme = Union[APIKey, HTTPBase, OAuth2, OpenIdConnect, HTTPBearer, APIKey_V1, HTTPBase_V1, OAuth2_V1, OpenIdConnect_V1, HTTPBearer_V1]
-
+SecurityScheme = Union[APIKey, HTTPBase, OAuth2, OpenIdConnect, HTTPBearer]
+SecurityScheme_V1 = Union[APIKey_V1, HTTPBase_V1, OAuth2_V1, OpenIdConnect_V1, HTTPBearer_V1]
 
 class Components(BaseModelWithConfig):
     schemas: Optional[Dict[str, Union[Schema, Reference]]] = None
@@ -700,7 +700,7 @@ class Components_V1(BaseModelWithConfig_V1):
     examples: Optional[Dict[str, Union[Example_V1, Reference_V1]]] = None
     requestBodies: Optional[Dict[str, Union[RequestBody_V1, Reference_V1]]] = None
     headers: Optional[Dict[str, Union[Header_V1, Reference_V1]]] = None
-    securitySchemes: Optional[Dict[str, Union[SecurityScheme, Reference_V1]]] = None
+    securitySchemes: Optional[Dict[str, Union[SecurityScheme_V1, Reference_V1]]] = None
     links: Optional[Dict[str, Union[Link_V1, Reference_V1]]] = None
     # Using Any for Specification Extensions
     callbacks: Optional[Dict[str, Union[Dict[str, PathItem_V1], Reference_V1, Any]]] = None
