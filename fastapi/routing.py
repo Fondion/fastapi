@@ -421,7 +421,9 @@ class APIRoute(routing.Route):
         generate_unique_id_function: Union[
             Callable[["APIRoute"], str], DefaultPlaceholder
         ] = Default(generate_unique_id),
+        use_pydantic_v1: bool = True
     ) -> None:
+        self.use_pydantic_v1 = use_pydantic_v1
         self.path = path
         self.endpoint = endpoint
         if isinstance(response_model, DefaultPlaceholder):
@@ -511,7 +513,7 @@ class APIRoute(routing.Route):
             self.response_fields = {}
 
         assert callable(endpoint), "An endpoint must be a callable"
-        self.dependant = get_dependant(path=self.path_format, call=self.endpoint)
+        self.dependant = get_dependant(path=self.path_format, call=self.endpoint, use_pydantic_v1=use_pydantic_v1)
         for depends in self.dependencies[::-1]:
             self.dependant.dependencies.insert(
                 0,
@@ -784,6 +786,14 @@ class APIRouter(routing.Router):
                 """
             ),
         ] = Default(generate_unique_id),
+        use_pydantic_v1: Annotated[
+            bool,
+            Doc(
+                """
+                Use Pydantic v1 behavior for this router.
+                """,
+            ),
+        ] = True,
     ) -> None:
         super().__init__(
             routes=routes,
@@ -809,6 +819,7 @@ class APIRouter(routing.Router):
         self.route_class = route_class
         self.default_response_class = default_response_class
         self.generate_unique_id_function = generate_unique_id_function
+        self.use_pydantic_v1 = use_pydantic_v1
 
     def route(
         self,
@@ -862,6 +873,7 @@ class APIRouter(routing.Router):
         generate_unique_id_function: Union[
             Callable[[APIRoute], str], DefaultPlaceholder
         ] = Default(generate_unique_id),
+        use_pydantic_v1: bool = True
     ) -> None:
         route_class = route_class_override or self.route_class
         responses = responses or {}
@@ -908,6 +920,7 @@ class APIRouter(routing.Router):
             callbacks=current_callbacks,
             openapi_extra=openapi_extra,
             generate_unique_id_function=current_generate_unique_id,
+            use_pydantic_v1=use_pydantic_v1 and self.use_pydantic_v1
         )
         self.routes.append(route)
 
@@ -940,6 +953,7 @@ class APIRouter(routing.Router):
         generate_unique_id_function: Callable[[APIRoute], str] = Default(
             generate_unique_id
         ),
+        use_pydantic_v1: bool = True
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
         def decorator(func: DecoratedCallable) -> DecoratedCallable:
             self.add_api_route(
@@ -968,6 +982,7 @@ class APIRouter(routing.Router):
                 callbacks=callbacks,
                 openapi_extra=openapi_extra,
                 generate_unique_id_function=generate_unique_id_function,
+                use_pydantic_v1=use_pydantic_v1
             )
             return func
 

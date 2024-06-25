@@ -246,6 +246,7 @@ def get_dependant(
     name: Optional[str] = None,
     security_scopes: Optional[List[str]] = None,
     use_cache: bool = True,
+    use_pydantic_v1: bool = True,
 ) -> Dependant:
     path_param_names = get_path_param_names(path)
     endpoint_signature = get_typed_signature(call)
@@ -264,6 +265,7 @@ def get_dependant(
             annotation=param.annotation,
             value=param.default,
             is_path_param=is_path_param,
+            use_pydantic_v1=use_pydantic_v1
         )
         if depends is not None:
             sub_dependant = get_param_sub_dependant(
@@ -321,6 +323,7 @@ def analyze_param(
     annotation: Any,
     value: Any,
     is_path_param: bool,
+    use_pydantic_v1: bool = True,
 ) -> Tuple[Any, Optional[params.Depends], Optional[ModelField | ModelField_V1]]:
     print(f"analyze_param param_name: {param_name}")
     print(f"analyze_param annotation: {annotation}")
@@ -417,15 +420,15 @@ def analyze_param(
             # We might check here that `default_value is Required`, but the fact is that the same
             # parameter might sometimes be a path parameter and sometimes not. See
             # `tests/test_infer_param_optionality.py` for an example.
-            field_info = params.Path(annotation=use_annotation)
+            field_info = params.Path(annotation=use_annotation) if not use_pydantic_v1 else params.Path_V1(annotation=use_annotation)
         elif is_uploadfile_or_nonable_uploadfile_annotation(
             type_annotation
         ) or is_uploadfile_sequence_annotation(type_annotation):
-            field_info = params.File(annotation=use_annotation, default=default_value)
+            field_info = params.File(annotation=use_annotation, default=default_value) if not use_pydantic_v1 else params.File_V1(annotation=use_annotation, default=default_value)
         elif not field_annotation_is_scalar(annotation=type_annotation):
-            field_info = params.Body(annotation=use_annotation, default=default_value)
+            field_info = params.Body(annotation=use_annotation, default=default_value) if not use_pydantic_v1 else params.Body_V1(annotation=use_annotation, default=default_value)
         else:
-            field_info = params.Query(annotation=use_annotation, default=default_value)
+            field_info = params.Query(annotation=use_annotation, default=default_value) if not use_pydantic_v1 else params.Query_V1(annotation=use_annotation, default=default_value)
     print(f"ANALYZE THIRD: {field_info}")
     field = None
     if field_info is not None:
