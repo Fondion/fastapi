@@ -71,8 +71,8 @@ class Info_V1(BaseModelWithConfig_V1):
     summary: Optional[str] = None
     description: Optional[str] = None
     termsOfService: Optional[str] = None
-    contact: Optional[Contact] = None
-    license: Optional[License] = None
+    contact: Optional[Contact_V1] = None
+    license: Optional[License_V1] = None
     version: str
 
 
@@ -97,7 +97,7 @@ class Server(BaseModelWithConfig):
 class Server_V1(BaseModelWithConfig_V1):
     url: Union[AnyUrl_V1, str]
     description: Optional[str] = None
-    variables: Optional[Dict[str, ServerVariable]] = None
+    variables: Optional[Dict[str, ServerVariable_V1]] = None
 
 
 class Reference(BaseModel):
@@ -306,9 +306,9 @@ class Schema_V1(BaseModelWithConfig_V1):
     examples: Optional[List[Any]] = None
     # Ref: OpenAPI 3.1.0: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#schema-object
     # Schema Object
-    discriminator: Optional[Discriminator] = None
+    discriminator: Optional[Discriminator_V1] = None
     xml: Optional[XML] = None
-    externalDocs: Optional[ExternalDocumentation] = None
+    externalDocs: Optional[ExternalDocumentation_V1] = None
     example: Annotated[
         Optional[Any],
         typing_deprecated(
