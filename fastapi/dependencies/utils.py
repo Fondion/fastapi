@@ -43,7 +43,7 @@ from fastapi._compat import (
     lenient_issubclass,
     sequence_types,
     serialize_sequence_value,
-    value_is_sequence,
+    value_is_sequence, ModelField_V1,
 )
 from fastapi.background import BackgroundTasks
 from fastapi.concurrency import (
@@ -321,7 +321,7 @@ def analyze_param(
     annotation: Any,
     value: Any,
     is_path_param: bool,
-) -> Tuple[Any, Optional[params.Depends], Optional[ModelField]]:
+) -> Tuple[Any, Optional[params.Depends], Optional[ModelField | ModelField_V1]]:
     print(f"analyze_param param_name: {param_name}")
     print(f"analyze_param annotation: {annotation}")
     print(f"analyze_param value: {value}")
@@ -339,7 +339,7 @@ def analyze_param(
         fastapi_annotations = [
             arg
             for arg in annotated_args[1:]
-            if isinstance(arg, (FieldInfo, params.Depends))
+            if isinstance(arg, (FieldInfo, FieldInfo_V1, params.Depends))
         ]
         fastapi_specific_annotations = [
             arg
@@ -348,11 +348,11 @@ def analyze_param(
         ]
         if fastapi_specific_annotations:
             fastapi_annotation: Union[
-                FieldInfo, params.Depends, None
+                FieldInfo, FieldInfo_V1, params.Depends, None
             ] = fastapi_specific_annotations[-1]
         else:
             fastapi_annotation = None
-        if isinstance(fastapi_annotation, FieldInfo):
+        if isinstance(fastapi_annotation, (FieldInfo, FieldInfo_V1)):
             # Copy `field_info` because we mutate `field_info.default` below.
             field_info = copy_field_info(
                 field_info=fastapi_annotation, annotation=use_annotation
@@ -368,7 +368,7 @@ def analyze_param(
                 field_info.default = Required
         elif isinstance(fastapi_annotation, params.Depends):
             depends = fastapi_annotation
-
+    print(f"ANALYZE FIRST: {field_info}")
     if isinstance(value, params.Depends):
         assert depends is None, (
             "Cannot specify `Depends` in `Annotated` and default value"
@@ -390,7 +390,7 @@ def analyze_param(
                 field_info.annotation = type_annotation
             except Exception:
                 pass
-
+    print(f"ANALYZE SECOND: {field_info}")
     if depends is not None and depends.dependency is None:
         # Copy `depends` before mutating it
         depends = copy(depends)
@@ -426,7 +426,7 @@ def analyze_param(
             field_info = params.Body(annotation=use_annotation, default=default_value)
         else:
             field_info = params.Query(annotation=use_annotation, default=default_value)
-
+    print(f"ANALYZE THIRD: {field_info}")
     field = None
     if field_info is not None:
         if is_path_param:
