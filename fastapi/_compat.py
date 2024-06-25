@@ -45,7 +45,13 @@ sequence_annotation_to_type = {
 sequence_types = tuple(sequence_annotation_to_type.keys())
 
 if PYDANTIC_V2:
-    from pydantic import AnyUrl
+    from pydantic.color import Color as Color_V2
+    from pydantic.v1.color import Color as Color_V1
+    from pydantic import AnyUrl as AnyUrl_V2
+    from pydantic.networks import NameEmail as NameEmail_V2
+    from pydantic.v1.networks import NameEmail as NameEmail_V1
+    from pydantic.types import SecretBytes as SecretBytes_V2, SecretStr as SecretStr_V2
+    from pydantic.v1.types import SecretBytes as SecretBytes_V1, SecretStr as SecretStr_V1
     from pydantic import BaseModel, create_model
     from pydantic import PydanticSchemaGenerationError as PydanticSchemaGenerationError
     from pydantic import TypeAdapter
@@ -120,6 +126,11 @@ if PYDANTIC_V2:
     UndefinedType_V2 = PydanticUndefinedType
 
     FieldInfo: TypeAlias = FieldInfo_V2 | FieldInfo_V1
+    Color: TypeAlias = Color_V2 | Color_V1
+    AnyUrl: TypeAlias = AnyUrl_V2 | AnyUrl_V1
+    NameEmail: TypeAlias = NameEmail_V2 | NameEmail_V1
+    SecretBytes: TypeAlias = SecretBytes_V2 | SecretBytes_V1
+    SecretStr: TypeAlias = SecretStr_V2 | SecretStr_V1
 
     def evaluate_forwardref(value: Any, globalns: dict[str, Any] | None = None, localns: dict[str, Any] | None = None) -> Any:
         try:

@@ -18,12 +18,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, Name
 from uuid import UUID
 
 from fastapi.types import IncEx
-from pydantic.color import Color
-from pydantic.networks import AnyUrl, NameEmail
-from pydantic.types import SecretBytes, SecretStr
+from fastapi._compat import BaseModel, BaseModel_V1, PYDANTIC_V2, UndefinedType, Url, _model_dump, Color, AnyUrl, NameEmail, SecretBytes, SecretStr
 from typing_extensions import Annotated, Doc
-
-from ._compat import BaseModel, BaseModel_V1, PYDANTIC_V2, UndefinedType, Url, _model_dump
 
 
 # Taken from Pydantic v1 as is
