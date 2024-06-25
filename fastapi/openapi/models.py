@@ -241,30 +241,30 @@ class Schema_V1(BaseModelWithConfig_V1):
     dynamicAnchor: Optional[str] = Field_V1(default=None, alias="$dynamicAnchor")
     ref: Optional[str] = Field_V1(default=None, alias="$ref")
     dynamicRef: Optional[str] = Field_V1(default=None, alias="$dynamicRef")
-    defs: Optional[Dict[str, "SchemaOrBool"]] = Field_V1(default=None, alias="$defs")
+    defs: Optional[Dict[str, "SchemaOrBool_V1"]] = Field_V1(default=None, alias="$defs")
     comment: Optional[str] = Field_V1(default=None, alias="$comment")
     # Ref: JSON Schema 2020-12: https://json-schema.org/draft/2020-12/json-schema-core.html#name-a-vocabulary-for-applying-s
     # A Vocabulary for Applying Subschemas
-    allOf: Optional[List["SchemaOrBool"]] = None
-    anyOf: Optional[List["SchemaOrBool"]] = None
-    oneOf: Optional[List["SchemaOrBool"]] = None
-    not_: Optional["SchemaOrBool"] = Field_V1(default=None, alias="not")
-    if_: Optional["SchemaOrBool"] = Field_V1(default=None, alias="if")
-    then: Optional["SchemaOrBool"] = None
-    else_: Optional["SchemaOrBool"] = Field_V1(default=None, alias="else")
-    dependentSchemas: Optional[Dict[str, "SchemaOrBool"]] = None
-    prefixItems: Optional[List["SchemaOrBool"]] = None
+    allOf: Optional[List["SchemaOrBool_V1"]] = None
+    anyOf: Optional[List["SchemaOrBool_V1"]] = None
+    oneOf: Optional[List["SchemaOrBool_V1"]] = None
+    not_: Optional["SchemaOrBool_V1"] = Field_V1(default=None, alias="not")
+    if_: Optional["SchemaOrBool_V1"] = Field_V1(default=None, alias="if")
+    then: Optional["SchemaOrBool_V1"] = None
+    else_: Optional["SchemaOrBool_V1"] = Field_V1(default=None, alias="else")
+    dependentSchemas: Optional[Dict[str, "SchemaOrBool_V1"]] = None
+    prefixItems: Optional[List["SchemaOrBool_V1"]] = None
     # TODO: uncomment and remove below when deprecating Pydantic v1
     # It generales a list of schemas for tuples, before prefixItems was available
     # items: Optional["SchemaOrBool"] = None
-    items: Optional[Union["SchemaOrBool", List["SchemaOrBool"]]] = None
-    contains: Optional["SchemaOrBool"] = None
-    properties: Optional[Dict[str, "SchemaOrBool"]] = None
-    patternProperties: Optional[Dict[str, "SchemaOrBool"]] = None
-    additionalProperties: Optional["SchemaOrBool"] = None
-    propertyNames: Optional["SchemaOrBool"] = None
-    unevaluatedItems: Optional["SchemaOrBool"] = None
-    unevaluatedProperties: Optional["SchemaOrBool"] = None
+    items: Optional[Union["SchemaOrBool_V1", List["SchemaOrBool_V1"]]] = None
+    contains: Optional["SchemaOrBool_V1"] = None
+    properties: Optional[Dict[str, "SchemaOrBool_V1"]] = None
+    patternProperties: Optional[Dict[str, "SchemaOrBool_V1"]] = None
+    additionalProperties: Optional["SchemaOrBool_V1"] = None
+    propertyNames: Optional["SchemaOrBool_V1"] = None
+    unevaluatedItems: Optional["SchemaOrBool_V1"] = None
+    unevaluatedProperties: Optional["SchemaOrBool_V1"] = None
     # Ref: JSON Schema Validation 2020-12: https://json-schema.org/draft/2020-12/json-schema-validation.html#name-a-vocabulary-for-structural
     # A Vocabulary for Structural Validation
     type: Optional[str] = None
@@ -294,7 +294,7 @@ class Schema_V1(BaseModelWithConfig_V1):
     # A Vocabulary for the Contents of String-Encoded Data
     contentEncoding: Optional[str] = None
     contentMediaType: Optional[str] = None
-    contentSchema: Optional["SchemaOrBool"] = None
+    contentSchema: Optional["SchemaOrBool_V1"] = None
     # Ref: JSON Schema Validation 2020-12: https://json-schema.org/draft/2020-12/json-schema-validation.html#name-a-vocabulary-for-basic-meta
     # A Vocabulary for Basic Meta-Data Annotations
     title: Optional[str] = None
@@ -320,7 +320,8 @@ class Schema_V1(BaseModelWithConfig_V1):
 
 # Ref: https://json-schema.org/draft/2020-12/json-schema-core.html#name-json-schema-documents
 # A JSON Schema MUST be an object or a boolean.
-SchemaOrBool = Union[Schema, Schema_V1, bool]
+SchemaOrBool = Union[Schema, bool]
+SchemaOrBool_V1 = Union[Schema_V1, bool]
 
 
 class Example(TypedDict, total=False):
