@@ -8,6 +8,8 @@ from fastapi._compat import (
     BaseModel_V1,
     Field,
     Field_V1,
+    EmailStr,
+    EmailStr_V1,
     PYDANTIC_V2,
     CoreSchema,
     GetJsonSchemaHandler,
@@ -19,46 +21,6 @@ from fastapi.logger import logger
 # from pydantic import AnyUrl, BaseModel, Field
 from typing_extensions import Annotated, Literal, TypedDict
 from typing_extensions import deprecated as typing_deprecated
-
-try:
-    import email_validator
-
-    assert email_validator  # make autoflake ignore the unused import
-    from pydantic.v1 import EmailStr
-except ImportError:  # pragma: no cover
-
-    class EmailStr(str):  # type: ignore
-        @classmethod
-        def __get_validators__(cls) -> Iterable[Callable[..., Any]]:
-            yield cls.validate
-
-        @classmethod
-        def validate(cls, v: Any) -> str:
-            logger.warning(
-                "email-validator not installed, email fields will be treated as str.\n"
-                "To install, run: pip install email-validator"
-            )
-            return str(v)
-
-        @classmethod
-        def _validate(cls, __input_value: Any, _: Any) -> str:
-            logger.warning(
-                "email-validator not installed, email fields will be treated as str.\n"
-                "To install, run: pip install email-validator"
-            )
-            return str(__input_value)
-
-        @classmethod
-        def __get_pydantic_json_schema__(
-            cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler
-        ) -> JsonSchemaValue:
-            return {"type": "string", "format": "email"}
-
-        @classmethod
-        def __get_pydantic_core_schema__(
-            cls, source: Type[Any], handler: Callable[[Any], CoreSchema]
-        ) -> CoreSchema:
-            return with_info_plain_validator_function(cls._validate)
 
 
 class BaseModelWithConfig(BaseModel):
@@ -79,7 +41,7 @@ class Contact(BaseModelWithConfig):
 class Contact_V1(BaseModelWithConfig_V1):
     name: Optional[str] = None
     url: Optional[AnyUrl_V1] = None
-    email: Optional[EmailStr] = None
+    email: Optional[EmailStr_V1] = None
 
 
 class License(BaseModelWithConfig):

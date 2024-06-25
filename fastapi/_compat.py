@@ -45,6 +45,11 @@ sequence_annotation_to_type = {
 sequence_types = tuple(sequence_annotation_to_type.keys())
 
 if PYDANTIC_V2:
+    import email_validator
+    assert email_validator
+
+    from pydantic import EmailStr
+    from pydantic.v1 import EmailStr as EmailStr_V1
     from pydantic.color import Color as Color_V2
     from pydantic.v1.color import Color as Color_V1
     from pydantic import AnyUrl
