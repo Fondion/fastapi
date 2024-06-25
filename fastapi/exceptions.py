@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional, Sequence, Type, Union
 
-from _compat import BaseModel, BaseModel_V1, create_model, create_model_V1
+from fastapi._compat import BaseModel, BaseModel_V1, create_model, create_model_V1
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.exceptions import WebSocketException as StarletteWebSocketException
 from typing_extensions import Annotated, Doc
