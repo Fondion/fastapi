@@ -307,7 +307,7 @@ class Schema_V1(BaseModelWithConfig_V1):
     # Ref: OpenAPI 3.1.0: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#schema-object
     # Schema Object
     discriminator: Optional[Discriminator_V1] = None
-    xml: Optional[XML] = None
+    xml: Optional[XML_V1] = None
     externalDocs: Optional[ExternalDocumentation_V1] = None
     example: Annotated[
         Optional[Any],
