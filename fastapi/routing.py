@@ -519,7 +519,7 @@ class APIRoute(routing.Route):
                 0,
                 get_parameterless_sub_dependant(depends=depends, path=self.path_format),
             )
-        self.body_field = get_body_field(dependant=self.dependant, name=self.unique_id)
+        self.body_field = get_body_field(dependant=self.dependant, name=self.unique_id, use_pydantic_v1=use_pydantic_v1)
         self.app = request_response(self.get_route_handler())
 
     def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:

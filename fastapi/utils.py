@@ -74,6 +74,7 @@ def create_response_field(
     field_info: Optional[FieldInfo] = None,
     alias: Optional[str] = None,
     mode: Literal["validation", "serialization"] = "validation",
+    use_pydantic_v1: bool = True,
 ) -> ModelField:
     """
     Create a new response field. Raises if type_ is invalid.
@@ -83,7 +84,7 @@ def create_response_field(
     v1_kwargs = {"name": name}
     if PYDANTIC_V2:
         from fastapi._compat import BaseModel_V1, FieldInfo_V1
-        if lenient_issubclass(type_, BaseModel_V1):
+        if lenient_issubclass(type_, BaseModel_V1) or use_pydantic_v1:
             field_info = field_info or FieldInfo_V1()
         else:
             field_info = field_info or FieldInfo_V2(
@@ -124,7 +125,7 @@ def create_response_field(
     try:
         if PYDANTIC_V2:
             from fastapi._compat import BaseModel_V1, ModelField_V1
-            if lenient_issubclass(type_, BaseModel_V1):
+            if lenient_issubclass(type_, BaseModel_V1) or use_pydantic_v1:
                 print(f"------------------- KWARGS MODEL FIELD -------------------")
                 for item, value in v2_kwargs.items():
                     print(f"{item}: {value}")

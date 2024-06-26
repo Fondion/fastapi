@@ -465,6 +465,7 @@ def analyze_param(
             alias=alias,
             required=field_info.default in (Required, Undefined),
             field_info=field_info,
+            use_pydantic_v1=use_pydantic_v1,
         )
 
     return type_annotation, depends, field
@@ -783,7 +784,7 @@ async def request_body_to_args(
     return values, errors
 
 
-def get_body_field(*, dependant: Dependant, name: str) -> Optional[ModelField]:
+def get_body_field(*, dependant: Dependant, name: str, use_pydantic_v1: bool) -> Optional[ModelField]:
     flat_dependant = get_flat_dependant(dependant)
     if not flat_dependant.body_params:
         return None
@@ -830,6 +831,7 @@ def get_body_field(*, dependant: Dependant, name: str) -> Optional[ModelField]:
         required=required,
         alias="body",
         field_info=BodyFieldInfo(**BodyFieldInfo_kwargs),
+        use_pydantic_v1=use_pydantic_v1
     )
     check_file_field(final_field)
     return final_field
