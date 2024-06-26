@@ -207,6 +207,7 @@ def get_request_handler(
     response_model_exclude_defaults: bool = False,
     response_model_exclude_none: bool = False,
     dependency_overrides_provider: Optional[Any] = None,
+    use_pydantic_v1: bool = True
 ) -> Callable[[Request], Coroutine[Any, Any, Response]]:
     assert dependant.call is not None, "dependant.call must be a function"
     is_coroutine = asyncio.iscoroutinefunction(dependant.call)
@@ -273,6 +274,7 @@ def get_request_handler(
                     body=body,
                     dependency_overrides_provider=dependency_overrides_provider,
                     async_exit_stack=async_exit_stack,
+                    use_pydantic_v1=use_pydantic_v1
                 )
                 values, errors, background_tasks, sub_response, _ = solved_result
                 if not errors:
@@ -476,6 +478,7 @@ class APIRoute(routing.Route):
                 name=response_name,
                 type_=self.response_model,
                 mode="serialization",
+                use_pydantic_v1=use_pydantic_v1
             )
             # Create a clone of the field, so that a Pydantic submodel is not returned
             # as is just because it's an instance of a subclass of a more limited class
@@ -505,7 +508,7 @@ class APIRoute(routing.Route):
                     additional_status_code
                 ), f"Status code {additional_status_code} must not have a response body"
                 response_name = f"Response_{additional_status_code}_{self.unique_id}"
-                response_field = create_response_field(name=response_name, type_=model)
+                response_field = create_response_field(name=response_name, type_=model, use_pydantic_v1=use_pydantic_v1)
                 response_fields[additional_status_code] = response_field
         if response_fields:
             self.response_fields: Dict[Union[int, str], ModelField] = response_fields
@@ -536,6 +539,7 @@ class APIRoute(routing.Route):
             response_model_exclude_defaults=self.response_model_exclude_defaults,
             response_model_exclude_none=self.response_model_exclude_none,
             dependency_overrides_provider=self.dependency_overrides_provider,
+            use_pydantic_v1=self.use_pydantic_v1
         )
 
     def matches(self, scope: Scope) -> Tuple[Match, Scope]:

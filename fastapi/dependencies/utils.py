@@ -107,6 +107,7 @@ def get_param_sub_dependant(
     depends: params.Depends,
     path: str,
     security_scopes: Optional[List[str]] = None,
+    use_pydantic_v1: bool = True,
 ) -> Dependant:
     assert depends.dependency
     return get_sub_dependant(
@@ -115,14 +116,15 @@ def get_param_sub_dependant(
         path=path,
         name=param_name,
         security_scopes=security_scopes,
+        use_pydantic_v1=use_pydantic_v1
     )
 
 
-def get_parameterless_sub_dependant(*, depends: params.Depends, path: str) -> Dependant:
+def get_parameterless_sub_dependant(*, depends: params.Depends, path: str, use_pydantic_v1: bool) -> Dependant:
     assert callable(
         depends.dependency
     ), "A parameter-less dependency must have a callable dependency"
-    return get_sub_dependant(depends=depends, dependency=depends.dependency, path=path)
+    return get_sub_dependant(depends=depends, dependency=depends.dependency, path=path, use_pydantic_v1=use_pydantic_v1)
 
 
 def get_sub_dependant(
@@ -132,6 +134,7 @@ def get_sub_dependant(
     path: str,
     name: Optional[str] = None,
     security_scopes: Optional[List[str]] = None,
+    use_pydantic_v1: bool = True,
 ) -> Dependant:
     security_requirement = None
     security_scopes = security_scopes or []
@@ -151,6 +154,7 @@ def get_sub_dependant(
         name=name,
         security_scopes=security_scopes,
         use_cache=depends.use_cache,
+        use_pydantic_v1=use_pydantic_v1
     )
     if security_requirement:
         sub_dependant.security_requirements.append(security_requirement)
@@ -273,6 +277,7 @@ def get_dependant(
                 depends=depends,
                 path=path,
                 security_scopes=security_scopes,
+                use_pydantic_v1=use_pydantic_v1
             )
             dependant.dependencies.append(sub_dependant)
             continue
@@ -549,6 +554,7 @@ async def solve_dependencies(
     dependency_overrides_provider: Optional[Any] = None,
     dependency_cache: Optional[Dict[Tuple[Callable[..., Any], Tuple[str]], Any]] = None,
     async_exit_stack: AsyncExitStack,
+    use_pydantic_v1: bool = True,
 ) -> Tuple[
     Dict[str, Any],
     List[Any],
@@ -585,6 +591,7 @@ async def solve_dependencies(
                 call=call,
                 name=sub_dependant.name,
                 security_scopes=sub_dependant.security_scopes,
+                use_pydantic_v1=use_pydantic_v1
             )
 
         solved_result = await solve_dependencies(
@@ -596,6 +603,7 @@ async def solve_dependencies(
             dependency_overrides_provider=dependency_overrides_provider,
             dependency_cache=dependency_cache,
             async_exit_stack=async_exit_stack,
+            use_pydantic_v1=use_pydantic_v1
         )
         (
             sub_values,
