@@ -84,7 +84,7 @@ def create_response_field(
     v1_kwargs = {"name": name}
     if PYDANTIC_V2:
         from fastapi._compat import BaseModel_V1, FieldInfo_V1
-        if lenient_issubclass(type_, BaseModel_V1) or use_pydantic_v1:
+        if use_pydantic_v1:
             field_info = field_info or FieldInfo_V1()
         else:
             field_info = field_info or FieldInfo_V2(
@@ -96,11 +96,7 @@ def create_response_field(
     v1_kwargs.update({"field_info": field_info})
     if PYDANTIC_V2:
         from fastapi._compat import BaseModel_V1
-        if not lenient_issubclass(type_, BaseModel_V1):
-            v2_kwargs.update(
-                {"mode": mode}
-            )
-        else:
+        if use_pydantic_v1:
             v1_kwargs.update(
                 {
                     "type_": type_,
@@ -110,6 +106,13 @@ def create_response_field(
                     "model_config": model_config,
                     "alias": alias,
                 }
+            )
+            v2_kwargs.update(
+                {"mode": mode}
+            )
+        else:
+            v2_kwargs.update(
+                {"mode": mode}
             )
     else:
         v1_kwargs.update(
@@ -125,7 +128,7 @@ def create_response_field(
     try:
         if PYDANTIC_V2:
             from fastapi._compat import BaseModel_V1, ModelField_V1
-            if lenient_issubclass(type_, BaseModel_V1) or use_pydantic_v1:
+            if use_pydantic_v1:
                 print(f"------------------- KWARGS MODEL FIELD -------------------")
                 for item, value in v2_kwargs.items():
                     print(f"{item}: {value}")
