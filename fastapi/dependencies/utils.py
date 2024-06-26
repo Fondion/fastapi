@@ -387,7 +387,7 @@ def analyze_param(
             f" default value together for {param_name!r}"
         )
         depends = value
-    elif isinstance(value, FieldInfo):
+    elif isinstance(value, (FieldInfo, FieldInfo_V1)):
         assert field_info is None, (
             "Cannot specify FastAPI annotations in `Annotated` and default value"
             f" together for {param_name!r}"
@@ -485,12 +485,12 @@ def is_body_param(*, param_field: ModelField, is_path_param: bool) -> bool:
     elif is_scalar_field(field=param_field):
         return False
     elif isinstance(
-        param_field.field_info, (params.Query, params.Header)
+        param_field.field_info, (params.Query, params.Header, params.Query_V1, params.Header_V1)
     ) and is_scalar_sequence_field(param_field):
         return False
     else:
         assert isinstance(
-            param_field.field_info, params.Body
+            param_field.field_info, (params.Body, params.Body_V1)
         ), f"Param: {param_field.name} can only be a request body, using Body()"
         return True
 
